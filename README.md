@@ -1,6 +1,6 @@
 # SoC One Dragon
 
-这是铃兰之剑自动化辅助的独立应用目录。配置、素材、OCR 资源、日志和运行截图都在本目录内，整体移动到其他位置后仍可运行。
+铃兰之剑自动化辅助
 
 ## 运行
 
@@ -52,3 +52,11 @@ soc_one_dragon/
 ## 注意
 
 `Icons/` 下的文件名仍被流程代码直接引用，替换素材时尽量保持文件名不变。运行产生的 `img/` 和 `logs/` 可以清理，不影响程序下次启动。
+
+
+## 声明
+
+本项目基于[EzyAssistanceSS](https://github.com/KiraEzy/EzyAssistanceSS)开发，感谢开源
+
+
+
