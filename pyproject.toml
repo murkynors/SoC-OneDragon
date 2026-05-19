@@ -1,0 +1,21 @@
+[project]
+name = "soc-one-dragon"
+version = "0.1.0"
+description = "Sword of Convallaria automation helper"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "easyocr",
+    "mss",
+    "numpy",
+    "opencv-python",
+    "pillow",
+    "pyautogui",
+    "pygetwindow",
+    "pyside6",
+    "pywin32; sys_platform == 'win32'",
+    "pyyaml",
+]
+
+[tool.uv]
+package = false

@@ -1,0 +1,52 @@
+- LevelAutomation:
+    WUP_11:
+      characters: 列奧尼德,麥莎,迪塔利奧
+      isAuto: true
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: true
+    STARA_10:
+      characters: 科爾,澤維爾,拉維耶
+      isAuto: true
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: true
+    ENCC_10:
+      characters: 王國之刃 "紅隼",突擊騎土"神閃",倒吊人"兵蜂"
+      isAuto: true
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: true
+    EXP_10:
+      characters: 歌洛莉亞,泰登,藥劑師 "志願者"
+      isAuto: true
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: true
+    SRD_06:
+      characters: 舞孃 "蝴蝶",山地射手 "銳眼",倒吊人"暗夜"
+      isAuto: false
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: false
+    WEAA_10:
+      characters: 傭兵 "炎之魔女",光輝衛土"魔禁",倒吊人"執劍者"
+      isAuto: true
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: true
+    TRTA_09:
+      characters: ''
+      isAuto: true
+      isFreeAuto: false
+      autoDeploy: true
+      defaultDifficulty: true
+      highRewardFirst: true
+- Material_Mission:
+    mission: WUP_11,STARA_10,ENCC_10,EXP_10,SRD_06,WEAA_10,TRTA_09
