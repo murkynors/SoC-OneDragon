@@ -27,7 +27,8 @@ class OctoUI(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle("铃兰一条龙")
         self.selectedFiles = []
-        self.setMinimumSize(1000, 560)
+        self.setObjectName("appWindow")
+        self.setMinimumSize(1180, 720)
         self.runProg = True
         self.lastReadPtr = 0
         self.isLoadingMissions = False
@@ -50,14 +51,16 @@ class OctoUI(QtWidgets.QMainWindow):
                 self.characterNameList = config_data[3]['characterList']
 
         self.tabs = QtWidgets.QTabWidget()
+        self.tabs.setObjectName("contentStack")
         self.tab1 = QtWidgets.QWidget()
-        self.tab1Layout = QtWidgets.QHBoxLayout(self.tab1)
+        self.tab1Layout = QtWidgets.QVBoxLayout(self.tab1)
         self.tab1Layout.setContentsMargins(16, 16, 16, 16)
         self.tab1Layout.setSpacing(16)
         self.leftPanel = QtWidgets.QVBoxLayout()
         self.leftPanel.setSpacing(12)
         self.mission = []
         self.startAppOptionWidget = QtWidgets.QWidget()
+        self.startAppOptionWidget.setProperty("role", "taskRow")
         self.startAppOptionLayout = QtWidgets.QHBoxLayout(self.startAppOptionWidget)
         self.startAppOptionLayout.setAlignment(QtCore.Qt.AlignTop)
 
@@ -71,6 +74,7 @@ class OctoUI(QtWidgets.QMainWindow):
 
 
         self.farmResOptionWidget = QtWidgets.QWidget()
+        self.farmResOptionWidget.setProperty("role", "taskRow")
         self.farmResOptionLayout = QtWidgets.QHBoxLayout(self.farmResOptionWidget)
         self.farmResOptionLayout.setAlignment(QtCore.Qt.AlignTop)
 
@@ -83,6 +87,7 @@ class OctoUI(QtWidgets.QMainWindow):
         self.farmResOptionLayout.addWidget(self.farmResSetting)
 
         self.receiveRewardOptionWidget = QtWidgets.QWidget()
+        self.receiveRewardOptionWidget.setProperty("role", "taskRow")
         self.receiveRewardOptionLayout = QtWidgets.QHBoxLayout(self.receiveRewardOptionWidget)
         self.receiveRewardOptionLayout.setAlignment(QtCore.Qt.AlignTop)
 
@@ -98,16 +103,17 @@ class OctoUI(QtWidgets.QMainWindow):
 
         self.taskBox = QtWidgets.QGroupBox("任务队列")
 
-        self.StartBtn = QtWidgets.QPushButton("启动")
+        self.StartBtn = QtWidgets.QPushButton("启动队列")
         self.StartBtn.setObjectName("primaryButton")
         self.StartBtn.connect(self.StartBtn, QtCore.SIGNAL("clicked()"), lambda: self.startMainFlow([self.startAppCheckbox.isChecked(), self.farmResCheckbox.isChecked(), self.receiveRewardCheckbox.isChecked()]))
 
-        self.StopBtn = QtWidgets.QPushButton("停止")
+        self.StopBtn = QtWidgets.QPushButton("停止流程")
         self.StopBtn.setObjectName("dangerButton")
         self.StopBtn.connect(self.StopBtn, QtCore.SIGNAL("clicked()"), lambda: self.stopMainFlow())
 
-        self.taskIntroLabel = QtWidgets.QLabel("选择要执行的自动化步骤，日志会在右侧实时刷新。")
+        self.taskIntroLabel = QtWidgets.QLabel("按执行顺序勾选模块；开始前会保存当前连接、OCR 和队列设置。")
         self.taskIntroLabel.setProperty("role", "muted")
+        self.taskIntroLabel.setWordWrap(True)
 
         self.taskLabelLayout = QtWidgets.QVBoxLayout(self.taskBox)
         self.taskLabelLayout.setSpacing(10)
@@ -143,12 +149,21 @@ class OctoUI(QtWidgets.QMainWindow):
         self.logText.setReadOnly(True)
         self.logText.setText("")
         self.streamerDisplayVbox.addWidget(self.logText)
-        self.rightPanel.addWidget(self.logTitle)
+        self.logHeaderRow = QtWidgets.QHBoxLayout()
+        self.logStatusBadge = QtWidgets.QLabel("待命")
+        self.logStatusBadge.setObjectName("statusBadge")
+        self.logHeaderRow.addWidget(self.logTitle)
+        self.logHeaderRow.addStretch()
+        self.logHeaderRow.addWidget(self.logStatusBadge)
+        self.rightPanel.addLayout(self.logHeaderRow)
         self.rightPanel.addWidget(self.logHint)
         self.rightPanel.addWidget(self.recordingScrollArea, 1)
 
-        self.tab1Layout.addLayout(self.leftPanel, 1)
-        self.tab1Layout.addLayout(self.rightPanel, 2)
+        self.commandBodyLayout = QtWidgets.QHBoxLayout()
+        self.commandBodyLayout.setSpacing(16)
+        self.commandBodyLayout.addLayout(self.rightPanel, 2)
+        self.commandBodyLayout.addLayout(self.leftPanel, 1)
+        self.tab1Layout.addLayout(self.commandBodyLayout, 1)
 
         self.fixVideoTabWidget = QtWidgets.QWidget()
         self.fixVideoTabLayout = QtWidgets.QHBoxLayout()
@@ -168,12 +183,12 @@ class OctoUI(QtWidgets.QMainWindow):
         self.flineEditsScrollArea.setWidgetResizable(True)
         self.flineEditsScrollArea.setObjectName("panel")
 
-        self.saveSettingBtn = QtWidgets.QPushButton("保存文件")
+        self.saveSettingBtn = QtWidgets.QPushButton("保存修改")
         self.saveSettingBtn.clicked.connect(
             lambda: self.save_preset(self.missionPresetDropdown.currentText())
         )
 
-        self.loadSettingBtn = QtWidgets.QPushButton("加载文件")
+        self.loadSettingBtn = QtWidgets.QPushButton("加载模板")
         self.loadSettingBtn.clicked.connect(
             lambda: self.onLoadMissionPreset(self.missionPresetDropdown.currentText())
         )
@@ -183,18 +198,13 @@ class OctoUI(QtWidgets.QMainWindow):
 
         self.missionRemoveButton = QtWidgets.QPushButton("删除任务")
         self.missionRemoveButton.connect(self.missionRemoveButton, QtCore.SIGNAL("clicked()"), self.remove_missions)
-        self.newPresetButton = QtWidgets.QPushButton("另存为")
-
-        self.newPresetTextEdit = QtWidgets.QLineEdit()
-
-        self.newPresetButton.clicked.connect(
-            lambda: self.save_as_new_preset(self.newPresetTextEdit.text())
-        )
+        self.newPresetButton = QtWidgets.QPushButton("保存新模板")
+        self.newPresetButton.clicked.connect(self.prompt_save_as_new_preset)
         self.missionPresetDropdownWidget = QtWidgets.QWidget()
         self.missionPresetDropdownLayout = QtWidgets.QHBoxLayout()
         self.missionPresetDropdownWidget.setLayout(self.missionPresetDropdownLayout)
 
-        self.missionPresetDropdownLabel = QtWidgets.QLabel("预设列表")
+        self.missionPresetDropdownLabel = QtWidgets.QLabel("模板列表")
         self.missionPresetDropdown = QtWidgets.QComboBox()
         self.missionPresetDropdown.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
@@ -218,7 +228,6 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionSettingSaveAsLayout = QtWidgets.QHBoxLayout()
         self.missionSettingSaveAsWidget.setLayout(self.missionSettingSaveAsLayout)
         self.missionSettingSaveAsLayout.addWidget(self.newPresetButton)
-        self.missionSettingSaveAsLayout.addWidget(self.newPresetTextEdit)
         self.missionSettingDifficultyWidget = QtWidgets.QWidget()
         self.missionSettingDifficultyLayout = QtWidgets.QHBoxLayout()
         self.missionSettingDifficultyWidget.setLayout(self.missionSettingDifficultyLayout)
@@ -226,6 +235,7 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionSettingDifficultyLabel = QtWidgets.QLabel("难度")
         self.missionSettingDifficultyDropdown = QtWidgets.QComboBox()
         self.missionSettingDifficultyDropdown.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.missionSettingDifficultyDropdown.setMinimumWidth(180)
 
         for mission in self.missionInfoList:
             if mission["id"] == self.editingMission.missionId:
@@ -243,21 +253,35 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionSettingButtonWidget.setLayout(self.missionSettingButtonLayout)
         self.missionSettingButtonLayout.addWidget(self.fAddButton)
         self.missionSettingButtonLayout.addWidget(self.missionRemoveButton)
-        self.heroListToggleButton = QtWidgets.QPushButton("展开角色列表")
+        self.heroListToggleButton = QtWidgets.QPushButton("角色列表")
         self.heroListToggleButton.clicked.connect(self.toggleHeroListPanel)
         self.heroListText = QtWidgets.QLabel("角色列表")
 
         self.PPLeftPanelWidget = QtWidgets.QWidget()
+        self.PPLeftPanelWidget.setObjectName("panelCard")
         self.PPLeftPanelLayout = QtWidgets.QVBoxLayout()
         self.PPLeftPanelLayout.setSpacing(10)
+        self.queueTitle = QtWidgets.QLabel("任务列表")
+        self.queueTitle.setProperty("role", "title")
+        self.flineEditsScrollArea.setMinimumHeight(280)
+        self.PPLeftPanelLayout.addWidget(self.queueTitle)
         self.PPLeftPanelLayout.addWidget(self.flineEditsScrollArea)
-        self.PPLeftPanelLayout.addWidget(self.missionSettingSLWidget)
-        self.PPLeftPanelLayout.addWidget(self.missionSettingSaveAsWidget)
-
-        self.PPLeftPanelLayout.addWidget(self.missionPresetDropdownWidget)
-        self.PPLeftPanelLayout.addWidget(self.missionSettingButtonWidget)
-        self.PPLeftPanelLayout.addWidget(self.heroListToggleButton)
         self.PPLeftPanelWidget.setLayout(self.PPLeftPanelLayout)
+
+        self.missionControlPanelWidget = QtWidgets.QWidget()
+        self.missionControlPanelWidget.setObjectName("panelCard")
+        self.missionControlPanelLayout = QtWidgets.QGridLayout()
+        self.missionControlPanelLayout.setSpacing(10)
+        self.missionControlPanelWidget.setLayout(self.missionControlPanelLayout)
+        self.missionControlTitle = QtWidgets.QLabel("模板与操作")
+        self.missionControlTitle.setProperty("role", "title")
+        self.missionControlPanelLayout.addWidget(self.missionControlTitle, 0, 0, 1, 3)
+        self.missionControlPanelLayout.addWidget(self.missionPresetDropdownWidget, 1, 0, 1, 3)
+        self.missionControlPanelLayout.addWidget(self.loadSettingBtn, 2, 0)
+        self.missionControlPanelLayout.addWidget(self.saveSettingBtn, 2, 1)
+        self.missionControlPanelLayout.addWidget(self.newPresetButton, 2, 2)
+        self.missionControlPanelLayout.addWidget(self.missionSettingButtonWidget, 3, 0, 1, 2)
+        self.missionControlPanelLayout.addWidget(self.heroListToggleButton, 3, 2, 1, 1)
 
         self.heroListWidget = QtWidgets.QWidget()
         self.heroListGrid = QtWidgets.QGridLayout()
@@ -282,7 +306,6 @@ class OctoUI(QtWidgets.QMainWindow):
 
         self.heroSettingClearButton = QtWidgets.QPushButton("清除选择")
         self.heroSettingClearButton.clicked.connect(self.clear_current_character_selection)
-
         self.heroSettingButtonWidget = QtWidgets.QWidget()
         self.heroSettingButtonLayout = QtWidgets.QHBoxLayout()
         self.heroSettingButtonWidget.setLayout(self.heroSettingButtonLayout)
@@ -365,6 +388,7 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionSettingDifficultyLabel = QtWidgets.QLabel("难度")
         self.missionSettingDifficultyDropdown = QtWidgets.QComboBox()
         self.missionSettingDifficultyDropdown.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.missionSettingDifficultyDropdown.setMinimumWidth(180)
 
         for mission in self.missionInfoList:
             if mission["id"] == self.editingMission.missionId:
@@ -384,6 +408,7 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionSettingMidMissionLabel = QtWidgets.QLabel("分页")
         self.missionSettingMidMissionDropdown = QtWidgets.QComboBox()
         self.missionSettingMidMissionDropdown.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.missionSettingMidMissionDropdown.setMinimumWidth(180)
 
         for mission in self.missionInfoList:
             if mission["id"] == self.editingMission.missionId:
@@ -412,6 +437,7 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionSettingLayout.addStretch()
 
         self.PPMiddlePanelWidget = QtWidgets.QWidget()
+        self.PPMiddlePanelWidget.setObjectName("panelCard")
         self.PPMiddlePanelLayout = QtWidgets.QVBoxLayout()
         self.PPMiddlePanelLayout.setSpacing(10)
         self.PPMiddlePanelLayout.addWidget(self.heroListText)
@@ -419,18 +445,23 @@ class OctoUI(QtWidgets.QMainWindow):
         self.PPMiddlePanelLayout.addWidget(self.heroListScrollArea)
         self.PPMiddlePanelLayout.addWidget(self.heroSettingButtonWidget)
         self.PPMiddlePanelWidget.setLayout(self.PPMiddlePanelLayout)
+        self.heroListExpanded = False
         self.PPMiddlePanelWidget.setVisible(False)
 
         self.PPRightPanelWidget = QtWidgets.QWidget()
+        self.PPRightPanelWidget.setObjectName("panelCard")
         self.PPRightPanelLayout = QtWidgets.QVBoxLayout()
         self.PPRightPanelLayout.setSpacing(10)
         self.PPRightPanelWidget.setLayout(self.PPRightPanelLayout)
         self.PPRightPanelLayout.addWidget(self.missionSettingLabel)
         self.PPRightPanelLayout.addWidget(self.missionSettingWidget)
 
-        self.fixVideoTabLayout.addWidget(self.PPLeftPanelWidget, 1)
-        self.fixVideoTabLayout.addWidget(self.PPMiddlePanelWidget, 1)
-        self.fixVideoTabLayout.addWidget(self.PPRightPanelWidget, 1)
+        self.pipelineRightLayout = QtWidgets.QVBoxLayout()
+        self.pipelineRightLayout.setSpacing(16)
+        self.pipelineRightLayout.addWidget(self.PPRightPanelWidget, 3)
+        self.pipelineRightLayout.addWidget(self.missionControlPanelWidget, 2)
+        self.fixVideoTabLayout.addWidget(self.PPLeftPanelWidget, 3)
+        self.fixVideoTabLayout.addLayout(self.pipelineRightLayout, 2)
 
 
 
@@ -439,17 +470,24 @@ class OctoUI(QtWidgets.QMainWindow):
         self.tabSettingLayout.setContentsMargins(16, 16, 16, 16)
         self.tabSettingLayout.setSpacing(12)
         self.tabFormLayout = QtWidgets.QFormLayout()
+        self.tabFormLayout.setLabelAlignment(QtCore.Qt.AlignRight)
+        self.settingFormPanel = QtWidgets.QFrame()
+        self.settingFormPanel.setObjectName("panelCard")
+        self.settingFormPanel.setLayout(self.tabFormLayout)
         self.tabSetting.setLayout(self.tabSettingLayout)
 
         self.adbDirTextEdit = QtWidgets.QLineEdit()
         self.connectionPortTextEdit = QtWidgets.QLineEdit()
         self.controlModeDropdown = QtWidgets.QComboBox()
         self.controlModeDropdown.addItems(["window", "adb"])
+        self.controlModeDropdown.setView(QtWidgets.QListView())
+        self.controlModeDropdown.currentTextChanged.connect(self.updateControlModeFields)
         self.windowTitleTextEdit = QtWidgets.QLineEdit()
         self.processNameTextEdit = QtWidgets.QLineEdit()
         self.baseResolutionTextEdit = QtWidgets.QLineEdit()
         self.ocrLanguageDropdown = QtWidgets.QComboBox()
         self.ocrLanguageDropdown.addItems(["ch_sim,en", "ch_tra,en"])
+        self.ocrLanguageDropdown.setView(QtWidgets.QListView())
 
         self.isLoadingRuntimeSettings = True
         try:
@@ -480,9 +518,12 @@ class OctoUI(QtWidgets.QMainWindow):
             self.isLoadingRuntimeSettings = False
 
 
-        self.tabFormLayout.addRow("控制模式", self.controlModeDropdown)
-        self.tabFormLayout.addRow("窗口标题", self.windowTitleTextEdit)
-        self.tabFormLayout.addRow("进程名", self.processNameTextEdit)
+        self.controlModeLabel = QtWidgets.QLabel("控制模式")
+        self.windowTitleLabel = QtWidgets.QLabel("窗口标题")
+        self.processNameLabel = QtWidgets.QLabel("进程名")
+        self.tabFormLayout.addRow(self.controlModeLabel, self.controlModeDropdown)
+        self.tabFormLayout.addRow(self.windowTitleLabel, self.windowTitleTextEdit)
+        self.tabFormLayout.addRow(self.processNameLabel, self.processNameTextEdit)
         self.tabFormLayout.addRow("基准分辨率", self.baseResolutionTextEdit)
         self.tabFormLayout.addRow("OCR语言", self.ocrLanguageDropdown)
         self.tabFormLayout.addRow("ADB路径", self.adbDirTextEdit)
@@ -491,19 +532,25 @@ class OctoUI(QtWidgets.QMainWindow):
         self.applySetting = QtWidgets.QPushButton("保存设置")
         self.applySetting.setObjectName("primaryButton")
         self.applySetting.clicked.connect(self.applySettingAction)
-        self.settingActionRow = QtWidgets.QHBoxLayout();
+        self.settingActionRow = QtWidgets.QHBoxLayout()
+        self.settingActionRow.addStretch()
         self.settingActionRow.addWidget(self.applySetting)
-        self.tabSettingLayout.addLayout(self.tabFormLayout)
+        self.tabSettingLayout.addWidget(self.settingFormPanel)
         self.tabSettingLayout.addLayout(self.settingActionRow)
-        self.tabs.addTab(self.tab1, "一键刷资源")
+        self.tabSettingLayout.addStretch()
+        self.updateControlModeFields(self.controlModeDropdown.currentText())
+        self.tabs.addTab(self.tab1, "控制台")
         self.tabs.addTab(self.fixVideoTabWidget, "刷图流程")
         self.tabs.addTab(self.tabSetting, "设置")
         self.tabs.currentChanged.connect(self.onTabChanged)
+        self.tabs.currentChanged.connect(self.syncNavigationState)
+        self.tabs.tabBar().hide()
 
-        self.setCentralWidget(self.tabs)
+        self.setCentralWidget(self.buildAppShell())
+        self.syncNavigationState(0)
 
         self.setWindowTitle("铃兰一条龙")
-        self.resize(1100, 640)
+        self.resize(1280, 760)
 
         self.initMissions()
         self.timer = QtCore.QTimer()
@@ -514,6 +561,90 @@ class OctoUI(QtWidgets.QMainWindow):
         self.timer_log.timeout.connect(self.monitor_log)
         self.timer_log.start(1000)
 
+    def buildAppShell(self):
+        shell = QtWidgets.QWidget()
+        shell.setObjectName("appShell")
+        shell_layout = QtWidgets.QHBoxLayout(shell)
+        shell_layout.setContentsMargins(0, 0, 0, 0)
+        shell_layout.setSpacing(0)
+
+        sidebar = QtWidgets.QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(232)
+        sidebar_layout = QtWidgets.QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(22, 24, 18, 24)
+        sidebar_layout.setSpacing(12)
+
+        brand = QtWidgets.QLabel("铃兰一条龙")
+        brand.setProperty("role", "brand")
+        caption = QtWidgets.QLabel("Sword of Convallaria Ops")
+        caption.setProperty("role", "sidebarCaption")
+        sidebar_layout.addWidget(brand)
+        sidebar_layout.addWidget(caption)
+        sidebar_layout.addSpacing(18)
+
+        self.navButtons = []
+        nav_items = [
+            ("控制台", 0),
+            ("刷图流程", 1),
+            ("设置", 2),
+        ]
+        for title, index in nav_items:
+            button = self.createNavButton(title, index)
+            self.navButtons.append(button)
+            sidebar_layout.addWidget(button)
+
+        sidebar_layout.addStretch()
+        self.globalStatusBadge = QtWidgets.QLabel("待命")
+        self.globalStatusBadge.setObjectName("statusBadge")
+        sidebar_layout.addWidget(self.globalStatusBadge)
+        footer = QtWidgets.QLabel("Window / ADB\n1280 x 720 基准")
+        footer.setProperty("role", "sidebarFooter")
+        sidebar_layout.addWidget(footer)
+
+        content = QtWidgets.QWidget()
+        content.setObjectName("contentShell")
+        content_layout = QtWidgets.QVBoxLayout(content)
+        content_layout.setContentsMargins(24, 18, 24, 24)
+        content_layout.setSpacing(14)
+
+        content_layout.addWidget(self.tabs, 1)
+
+        shell_layout.addWidget(sidebar)
+        shell_layout.addWidget(content, 1)
+        return shell
+
+    def createNavButton(self, title, index):
+        button = QtWidgets.QPushButton(title)
+        button.setCheckable(True)
+        button.setProperty("role", "navButton")
+        button.clicked.connect(lambda checked=False, page_index=index: self.setActivePage(page_index))
+        return button
+
+    def setActivePage(self, index):
+        self.tabs.setCurrentIndex(index)
+
+    def syncNavigationState(self, index):
+        for button_index, button in enumerate(getattr(self, "navButtons", [])):
+            button.setChecked(button_index == index)
+
+    def setRunStatus(self, text):
+        for badge_name in ("logStatusBadge", "globalStatusBadge"):
+            badge = getattr(self, badge_name, None)
+            if badge is not None:
+                badge.setText(text)
+
+    def updateControlModeFields(self, mode):
+        is_adb = ADBClass.AdbSingleton.normalize_control_mode(mode, 'window') == 'adb'
+        for widget in (
+            getattr(self, "windowTitleLabel", None),
+            getattr(self, "windowTitleTextEdit", None),
+            getattr(self, "processNameLabel", None),
+            getattr(self, "processNameTextEdit", None),
+        ):
+            if widget is not None:
+                widget.setVisible(not is_adb)
+
     def monitor_log(self):
         file_path = 'logs\\log_test.txt'
         monitor = Monitor(file_path, self.lastReadPtr)
@@ -523,9 +654,27 @@ class OctoUI(QtWidgets.QMainWindow):
             self.logText.append(newText[0])
 
     def toggleHeroListPanel(self):
-        is_visible = self.PPMiddlePanelWidget.isVisible()
-        self.PPMiddlePanelWidget.setVisible(not is_visible)
-        self.heroListToggleButton.setText("收起角色列表" if not is_visible else "展开角色列表")
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("角色列表")
+        dialog.setMinimumSize(820, 560)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+
+        self.PPMiddlePanelWidget.setParent(dialog)
+        self.PPMiddlePanelWidget.setVisible(True)
+        layout.addWidget(self.PPMiddlePanelWidget, 1)
+
+        button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close, dialog)
+        close_button = button_box.button(QtWidgets.QDialogButtonBox.Close)
+        if close_button is not None:
+            close_button.clicked.connect(dialog.reject)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+        dialog.exec()
+
+        self.PPMiddlePanelWidget.setVisible(False)
+        self.PPMiddlePanelWidget.setParent(None)
 
     def autoSaveMissions(self):
         if getattr(self, "isLoadingMissions", False):
@@ -628,7 +777,7 @@ class OctoUI(QtWidgets.QMainWindow):
             if shortFormMissionId in levelAutomation and shortFormMissionId not in usedMissionIds:
                 missionId = shortFormMissionId
             else:
-                # 同一关卡可以在预设里重复出现，保存时会追加 _1/_2；这里按顺序还原。
+                # 同一关卡可以在模板里重复出现，保存时会追加 _1/_2；这里按顺序还原。
                 duplicatePrefix = shortFormMissionId + "_"
                 for candidateMissionId in levelAutomation.keys():
                     if candidateMissionId in usedMissionIds:
@@ -654,6 +803,7 @@ class OctoUI(QtWidgets.QMainWindow):
 
     def onFlowFinished(self):
         self.thread_pool = []
+        self.setRunStatus("已完成")
     def startMainFlow(self, taskCheckBoxArray):
         self.saveRuntimeSettings()
         for thread in getattr(self, "thread_pool", []):
@@ -668,6 +818,7 @@ class OctoUI(QtWidgets.QMainWindow):
         self.lastReadPtr = 0
         ADBClass.AdbSingleton.getInstance().resetStop()
         LoggerSingleton.getInstance().info('./logs/log_test.txt', "开始执行流程")
+        self.setRunStatus("运行中")
 
         # 自动化流程放进独立 QThread，主线程只负责 Qt 界面响应。
         thread_pool = QThreadPool.globalInstance()
@@ -682,8 +833,10 @@ class OctoUI(QtWidgets.QMainWindow):
     def stopMainFlow(self):
         if not getattr(self, "thread_pool", None):
             LoggerSingleton.getInstance().info('./logs/log_test.txt', "停止：当前没有运行中的流程")
+            self.setRunStatus("待命")
             return
         LoggerSingleton.getInstance().info('./logs/log_test.txt', "停止：已请求停止流程")
+        self.setRunStatus("停止中")
         ADBClass.AdbSingleton.getInstance().requestStop()
         for thread in self.thread_pool:
             if thread.isRunning():
@@ -693,6 +846,7 @@ class OctoUI(QtWidgets.QMainWindow):
                     return
         self.thread_pool = []
         LoggerSingleton.getInstance().info('./logs/log_test.txt', "停止：流程已结束")
+        self.setRunStatus("已停止")
 
     def defaultReceiveRewardSubtasks(self):
         return dict(REWARD_SUBTASK_DEFAULTS)
@@ -1088,6 +1242,22 @@ class OctoUI(QtWidgets.QMainWindow):
         OctoUtil.OctoUtil.parse_mission_to_preset_yaml(self.scheduleMissionList, filename)
     def save_preset(self, fileName):
         OctoUtil.OctoUtil.parse_mission_to_preset_yaml(self.scheduleMissionList, fileName)
+
+    def prompt_save_as_new_preset(self):
+        filename, ok = QtWidgets.QInputDialog.getText(self, "保存新模板", "模板名称")
+        filename = filename.strip()
+        if not ok or filename == "":
+            return
+        filename = re.sub(r'[\\/:*?"<>|]+', "_", filename)
+        if filename.lower().endswith(".yaml"):
+            filename = filename[:-5]
+        elif filename.lower().endswith(".yml"):
+            filename = filename[:-4]
+        self.save_as_new_preset(filename)
+        preset_path = f'.\\configs\\{filename}.yaml'
+        if self.missionPresetDropdown.findText(preset_path) < 0:
+            self.missionPresetDropdown.addItem(preset_path)
+        self.missionPresetDropdown.setCurrentText(preset_path)
 
     def save_as_new_preset(self, filename):
         filename = f'.\\configs\\{filename}.yaml'
