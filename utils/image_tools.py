@@ -317,15 +317,15 @@ class OctoUtil:
                 w, h = pattern.shape[::-1]
                 resArr = []
                 for i in range(len(locations[0])):
+                    currCoord = (offset[0] + x[i] + w / 2, offset[1] + y[i] + h / 2)
                     isTooClose = False
                     for coord in resArr:
-                        currCoord = (x[i], y[i])
                         dist = math.dist(coord, currCoord)
                         if dist < 50:
                             isTooClose = True
                             break
                     if not isTooClose:
-                        resArr.append((offset[0] + x[i] + w / 2, offset[1] + y[i] + h / 2))
+                        resArr.append(currCoord)
                 return resArr
             else:
                 return None

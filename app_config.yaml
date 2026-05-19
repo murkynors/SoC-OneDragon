@@ -300,8 +300,8 @@
   - ch_sim
   - en
   taskSelection:
-    startApp: true
-    farmResources: true
+    startApp: false
+    farmResources: false
     receiveReward: true
     receiveRewardSubtasks:
       daily: true

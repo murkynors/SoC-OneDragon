@@ -772,28 +772,63 @@ class receiveReward:
         for _ in range(3):
             self.swipe_pos((1125, 650), (1125, 145), duration=900, sleep_seconds=0.8)
 
+    def is_enabled_voyage_exchange_button(self, screenshot_path, pos):
+        try:
+            image = Image.open(screenshot_path).convert("RGB")
+            x, y = int(pos[0]), int(pos[1])
+            left = max(0, x - 80)
+            right = min(image.width, x + 80)
+            top = max(0, y - 26)
+            bottom = min(image.height, y + 26)
+            if left >= right or top >= bottom:
+                return False
+
+            region = image.crop((left, top, right, bottom))
+            stat = ImageStat.Stat(region)
+            brightness = sum(stat.mean) / 3
+            print("voyage exchange button brightness:", pos, brightness)
+            return brightness >= 135
+        except Exception as exc:
+            print("voyage exchange button color check failed:", exc)
+            return True
+
+    def filter_enabled_voyage_exchange_positions(self, screenshot_path, positions):
+        enabled_positions = []
+        for pos in sorted(positions, key=lambda item: (item[1], item[0])):
+            if self.is_enabled_voyage_exchange_button(screenshot_path, pos):
+                enabled_positions.append(pos)
+        return enabled_positions
+
     def exchange_bottom_items(self):
         self.scroll_voyage_exchange_to_bottom()
-        screenshot_path = self.capture('./img/voyageExchangeBottomCheck.png')
-        exchange_positions = OctoUtil.OctoUtil.cv2CheckImgExist(
-            './Icons/voyage_exchange_bottom.png',
-            screenshot_path,
-            isSingle=False,
-            threshold=0.72,
-            min_x=500,
-            max_x=1210,
-            min_y=80,
-            max_y=690
-        )
-        print("cv2 result (./Icons/voyage_exchange_bottom.png): ", exchange_positions)
-        if not exchange_positions:
-            if not self.confirm_voyage_exchange_screen('./img/voyageExchangeBottomMissingCheck.png'):
-                self.log("当前不在远航兑换界面，跳过底部兑换")
-                return False
-            self.log("未找到远航底部兑换按钮")
-            return False
-        exchange_positions = sorted(exchange_positions, key=lambda pos: (pos[1], pos[0]))
-        for pos in exchange_positions:
+        exchanged_any = False
+        for _ in range(5):
+            screenshot_path = self.capture('./img/voyageExchangeBottomCheck.png')
+            exchange_positions = OctoUtil.OctoUtil.cv2CheckImgExist(
+                './Icons/voyage_exchange_bottom.png',
+                screenshot_path,
+                isSingle=False,
+                threshold=0.72,
+                min_x=500,
+                max_x=1210,
+                min_y=80,
+                max_y=690
+            )
+            print("cv2 result (./Icons/voyage_exchange_bottom.png): ", exchange_positions)
+            if not exchange_positions:
+                if not self.confirm_voyage_exchange_screen('./img/voyageExchangeBottomMissingCheck.png'):
+                    self.log("当前不在远航兑换界面，跳过底部兑换")
+                    return exchanged_any
+                self.log("未找到远航底部兑换按钮")
+                return exchanged_any
+
+            exchange_positions = self.filter_enabled_voyage_exchange_positions(screenshot_path, exchange_positions)
+            if not exchange_positions:
+                self.log("远航底部可兑换项目已兑完")
+                return exchanged_any
+
+            pos = exchange_positions[0]
             self.click_pos(pos, 0.8)
             self.dismiss_harvest_summary(initial_sleep=0.8)
-        return True
+            exchanged_any = True
+        return exchanged_any

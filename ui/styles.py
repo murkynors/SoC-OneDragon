@@ -10,6 +10,21 @@ QWidget {
 QWidget#appShell {
     background: #091013;
 }
+QDialog, QInputDialog {
+    background: #10191B;
+    color: #EAF1F4;
+}
+QDialog QLabel, QInputDialog QLabel {
+    color: #EAF1F4;
+    background: transparent;
+}
+QDialog QCheckBox, QInputDialog QCheckBox {
+    color: #EAF1F4;
+    background: transparent;
+}
+QDialogButtonBox {
+    background: transparent;
+}
 QFrame#sidebar {
     background: #0D171A;
     border-right: 1px solid #1E3438;
