@@ -312,8 +312,11 @@ class receiveReward:
             return False
 
         self.click_pos((190, 475), 2)
-        if not self.click_text(("领取", "領取"), './img/explorationTakeCheck.png', retries=4, sleep_seconds=1):
+        reward_taken = self.click_text(("领取", "領取"), './img/explorationTakeCheck.png', retries=4, sleep_seconds=1)
+        if not reward_taken:
             self.log("未找到探索奖励领取按钮，继续尝试返回")
+        else:
+            self.dismiss_harvest_summary(initial_sleep=0.8)
 
         self.click_game_back_button('./img/explorationBackCheck.png', retries=1, sleep_seconds=1)
         self.click_game_back_button('./img/explorationBackCheck.png', retries=1, sleep_seconds=1)
@@ -413,20 +416,23 @@ class receiveReward:
         time.sleep(initial_sleep)
         deadline = time.monotonic() + wait_seconds
         while True:
-            screenshot_path = self.capture('./img/voyageHarvestSummaryCheck.png')
-            if self.is_voyage_harvest_summary_screen(screenshot_path):
-                self.log("识别到远航收获一览，点击右下角关闭")
+            screenshot_path = self.capture('./img/harvestSummaryCheck.png')
+            if self.is_harvest_summary_screen(screenshot_path):
+                self.log("识别到收获一览，点击右下角关闭")
                 for _ in range(3):
                     self.click_pos((1218, 660), 1)
-                    screenshot_path = self.capture('./img/voyageHarvestSummaryCheck.png')
-                    if not self.is_voyage_harvest_summary_screen(screenshot_path):
+                    screenshot_path = self.capture('./img/harvestSummaryCheck.png')
+                    if not self.is_harvest_summary_screen(screenshot_path):
                         return True
-                    self.log("远航收获一览仍未关闭，再次点击右下角关闭")
+                    self.log("收获一览仍未关闭，再次点击右下角关闭")
                 return False
 
             if time.monotonic() >= deadline:
                 return False
             time.sleep(0.5)
+
+    def is_harvest_summary_screen(self, screenshot_path):
+        return self.is_voyage_harvest_summary_screen(screenshot_path)
 
     def is_voyage_harvest_summary_screen(self, screenshot_path):
         if OctoUtil.OctoUtil.cv2CheckImgExist(
