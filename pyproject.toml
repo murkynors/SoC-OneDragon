@@ -19,3 +19,8 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.20.0",
+]

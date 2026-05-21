@@ -380,7 +380,6 @@ class AdbSingleton:
             try_step("bring top", lambda: win32gui.BringWindowToTop(hwnd))
             try_step("set foreground", lambda: win32gui.SetForegroundWindow(hwnd))
             try_step("set active", lambda: win32gui.SetActiveWindow(hwnd))
-            try_step("set focus", lambda: win32gui.SetFocus(hwnd))
 
             try:
                 foreground_hwnd = win32gui.GetForegroundWindow()
