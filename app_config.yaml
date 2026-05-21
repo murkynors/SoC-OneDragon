@@ -308,3 +308,8 @@
       exploration: true
       friend: true
       voyage: true
+    pvp: true
+    pvpSettings:
+      difficulty: easy
+      battleCount: 3
+    weeklyTower: false

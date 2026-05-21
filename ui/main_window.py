@@ -3,9 +3,11 @@ import os
 import re
 
 from soc_one_dragon.services.logger import LoggerSingleton
+from soc_one_dragon.workflows.pvp import pvpWorkflow
 from soc_one_dragon.workflows.receive_reward import receiveReward
 from soc_one_dragon.workflows.start_app import runStartApp
 from soc_one_dragon.workflows.main_material import mainMaterial
+from soc_one_dragon.workflows.week_tower import weeklyTower
 
 import yaml
 from PySide6 import QtCore, QtWidgets
@@ -66,11 +68,9 @@ class OctoUI(QtWidgets.QMainWindow):
 
         self.startAppCheckbox = QCheckBox('开始唤醒', self)
         self.startAppCheckbox.stateChanged.connect(self.saveTaskSelection)
-        self.startAppSetting = QtWidgets.QPushButton("设置")
 
         self.startAppOptionLayout.addWidget(self.startAppCheckbox)
         self.startAppOptionLayout.addStretch()
-        self.startAppOptionLayout.addWidget(self.startAppSetting)
 
 
         self.farmResOptionWidget = QtWidgets.QWidget()
@@ -80,11 +80,9 @@ class OctoUI(QtWidgets.QMainWindow):
 
         self.farmResCheckbox = QCheckBox('自动刷图', self)
         self.farmResCheckbox.stateChanged.connect(self.saveTaskSelection)
-        self.farmResSetting = QtWidgets.QPushButton("设置")
 
         self.farmResOptionLayout.addWidget(self.farmResCheckbox)
         self.farmResOptionLayout.addStretch()
-        self.farmResOptionLayout.addWidget(self.farmResSetting)
 
         self.receiveRewardOptionWidget = QtWidgets.QWidget()
         self.receiveRewardOptionWidget.setProperty("role", "taskRow")
@@ -101,26 +99,49 @@ class OctoUI(QtWidgets.QMainWindow):
         self.receiveRewardOptionLayout.addStretch()
         self.receiveRewardOptionLayout.addWidget(self.receiveRewardSetting)
 
+        self.pvpOptionWidget = QtWidgets.QWidget()
+        self.pvpOptionWidget.setProperty("role", "taskRow")
+        self.pvpOptionLayout = QtWidgets.QHBoxLayout(self.pvpOptionWidget)
+        self.pvpOptionLayout.setAlignment(QtCore.Qt.AlignTop)
+
+        self.pvpCheckbox = QCheckBox('PVP', self)
+        self.pvpCheckbox.stateChanged.connect(self.saveTaskSelection)
+        self.pvpSetting = QtWidgets.QPushButton("设置")
+        self.pvpSetting.clicked.connect(self.openPvpSettings)
+        self.pvpSettings = self.defaultPvpSettings()
+
+        self.pvpOptionLayout.addWidget(self.pvpCheckbox)
+        self.pvpOptionLayout.addStretch()
+        self.pvpOptionLayout.addWidget(self.pvpSetting)
+
+        self.weeklyTowerOptionWidget = QtWidgets.QWidget()
+        self.weeklyTowerOptionWidget.setProperty("role", "taskRow")
+        self.weeklyTowerOptionLayout = QtWidgets.QHBoxLayout(self.weeklyTowerOptionWidget)
+        self.weeklyTowerOptionLayout.setAlignment(QtCore.Qt.AlignTop)
+
+        self.weeklyTowerCheckbox = QCheckBox('每周爬塔', self)
+        self.weeklyTowerCheckbox.stateChanged.connect(self.saveTaskSelection)
+
+        self.weeklyTowerOptionLayout.addWidget(self.weeklyTowerCheckbox)
+        self.weeklyTowerOptionLayout.addStretch()
+
         self.taskBox = QtWidgets.QGroupBox("任务队列")
 
         self.StartBtn = QtWidgets.QPushButton("启动队列")
         self.StartBtn.setObjectName("primaryButton")
-        self.StartBtn.connect(self.StartBtn, QtCore.SIGNAL("clicked()"), lambda: self.startMainFlow([self.startAppCheckbox.isChecked(), self.farmResCheckbox.isChecked(), self.receiveRewardCheckbox.isChecked()]))
+        self.StartBtn.connect(self.StartBtn, QtCore.SIGNAL("clicked()"), lambda: self.startMainFlow([self.startAppCheckbox.isChecked(), self.farmResCheckbox.isChecked(), self.receiveRewardCheckbox.isChecked(), self.pvpCheckbox.isChecked(), self.weeklyTowerCheckbox.isChecked()]))
 
         self.StopBtn = QtWidgets.QPushButton("停止流程")
         self.StopBtn.setObjectName("dangerButton")
         self.StopBtn.connect(self.StopBtn, QtCore.SIGNAL("clicked()"), lambda: self.stopMainFlow())
 
-        self.taskIntroLabel = QtWidgets.QLabel("按执行顺序勾选模块；开始前会保存当前连接、OCR 和队列设置。")
-        self.taskIntroLabel.setProperty("role", "muted")
-        self.taskIntroLabel.setWordWrap(True)
-
         self.taskLabelLayout = QtWidgets.QVBoxLayout(self.taskBox)
         self.taskLabelLayout.setSpacing(10)
-        self.taskLabelLayout.addWidget(self.taskIntroLabel)
         self.taskLabelLayout.addWidget(self.startAppOptionWidget)
         self.taskLabelLayout.addWidget(self.farmResOptionWidget)
         self.taskLabelLayout.addWidget(self.receiveRewardOptionWidget)
+        self.taskLabelLayout.addWidget(self.pvpOptionWidget)
+        self.taskLabelLayout.addWidget(self.weeklyTowerOptionWidget)
         self.taskLabelLayout.addSpacing(8)
         self.taskLabelLayout.addWidget(self.StartBtn)
         self.taskLabelLayout.addWidget(self.StopBtn)
@@ -132,8 +153,6 @@ class OctoUI(QtWidgets.QMainWindow):
         self.rightPanel.setSpacing(10)
         self.logTitle = QtWidgets.QLabel("运行日志")
         self.logTitle.setProperty("role", "title")
-        self.logHint = QtWidgets.QLabel("脚本输出、异常和停止请求会显示在这里。")
-        self.logHint.setProperty("role", "muted")
 
         self.streamerDisplayWidget = QtWidgets.QWidget()
         self.streamerDisplayVbox = QtWidgets.QVBoxLayout()
@@ -156,7 +175,6 @@ class OctoUI(QtWidgets.QMainWindow):
         self.logHeaderRow.addStretch()
         self.logHeaderRow.addWidget(self.logStatusBadge)
         self.rightPanel.addLayout(self.logHeaderRow)
-        self.rightPanel.addWidget(self.logHint)
         self.rightPanel.addWidget(self.recordingScrollArea, 1)
 
         self.commandBodyLayout = QtWidgets.QHBoxLayout()
@@ -511,9 +529,12 @@ class OctoUI(QtWidgets.QMainWindow):
                     self.ocrLanguageDropdown.setCurrentText(",".join(ocr_languages))
                     task_selection = config_lookup.get('taskSelection', {})
                     self.receiveRewardSubtasks = self.resolveReceiveRewardSubtasks(task_selection)
+                    self.pvpSettings = self.resolvePvpSettings(task_selection)
                     self.startAppCheckbox.setChecked(task_selection.get('startApp', False))
                     self.farmResCheckbox.setChecked(task_selection.get('farmResources', False))
                     self.receiveRewardCheckbox.setChecked(task_selection.get('receiveReward', False))
+                    self.pvpCheckbox.setChecked(task_selection.get('pvp', False))
+                    self.weeklyTowerCheckbox.setChecked(task_selection.get('weeklyTower', False))
         finally:
             self.isLoadingRuntimeSettings = False
 
@@ -881,12 +902,42 @@ class OctoUI(QtWidgets.QMainWindow):
             'receiveRewardSubtasks': self.receiveRewardSubtasks
         })
 
+    def defaultPvpSettings(self):
+        return dict(pvpWorkflow.DEFAULT_SETTINGS)
+
+    def resolvePvpSettings(self, task_selection):
+        pvp_settings = self.defaultPvpSettings()
+        if not isinstance(task_selection, dict):
+            return pvp_settings
+
+        configured_settings = task_selection.get('pvpSettings', {})
+        if isinstance(configured_settings, dict):
+            difficulty = configured_settings.get('difficulty')
+            if difficulty in pvpWorkflow.DIFFICULTY_INDEX:
+                pvp_settings['difficulty'] = difficulty
+            try:
+                pvp_settings['battleCount'] = max(1, int(configured_settings.get('battleCount', pvp_settings['battleCount'])))
+            except (TypeError, ValueError):
+                pvp_settings['battleCount'] = pvpWorkflow.DEFAULT_SETTINGS['battleCount']
+
+        return pvp_settings
+
+    def getPvpSettings(self):
+        if not hasattr(self, "pvpSettings"):
+            self.pvpSettings = self.defaultPvpSettings()
+        return self.resolvePvpSettings({
+            'pvpSettings': self.pvpSettings
+        })
+
     def buildTaskSelection(self):
         return {
             'startApp': self.startAppCheckbox.isChecked(),
             'farmResources': self.farmResCheckbox.isChecked(),
             'receiveReward': self.receiveRewardCheckbox.isChecked(),
             'receiveRewardSubtasks': self.getReceiveRewardSubtasks(),
+            'pvp': self.pvpCheckbox.isChecked(),
+            'pvpSettings': self.getPvpSettings(),
+            'weeklyTower': self.weeklyTowerCheckbox.isChecked(),
         }
 
     def openReceiveRewardSettings(self):
@@ -915,6 +966,46 @@ class OctoUI(QtWidgets.QMainWindow):
             self.receiveRewardSubtasks = {
                 key: checkbox.isChecked()
                 for key, checkbox in checkbox_map.items()
+            }
+            self.saveTaskSelection()
+
+    def openPvpSettings(self):
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("PVP 设置")
+        layout = QtWidgets.QFormLayout(dialog)
+
+        current_settings = self.getPvpSettings()
+        difficulty_dropdown = QtWidgets.QComboBox(dialog)
+        difficulty_options = [
+            ("easy", "简单"),
+            ("normal", "普通"),
+            ("hard", "困难"),
+        ]
+        for value, label in difficulty_options:
+            difficulty_dropdown.addItem(label, value)
+        difficulty_index = difficulty_dropdown.findData(current_settings.get('difficulty', 'normal'))
+        difficulty_dropdown.setCurrentIndex(max(0, difficulty_index))
+
+        battle_count_spinbox = QtWidgets.QSpinBox(dialog)
+        battle_count_spinbox.setMinimum(1)
+        battle_count_spinbox.setMaximum(99)
+        battle_count_spinbox.setValue(current_settings.get('battleCount', 1))
+
+        layout.addRow("选择难度", difficulty_dropdown)
+        layout.addRow("战斗次数", battle_count_spinbox)
+
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
+            dialog
+        )
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addRow(button_box)
+
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
+            self.pvpSettings = {
+                'difficulty': difficulty_dropdown.currentData(),
+                'battleCount': battle_count_spinbox.value(),
             }
             self.saveTaskSelection()
 
@@ -1018,6 +1109,19 @@ class OctoUI(QtWidgets.QMainWindow):
                 self.getReceiveRewardSubtasks()
             )
             self.MainFlow.append(receiveRewardWf)
+        if len(taskCheckBoxArray) > 3 and taskCheckBoxArray[3]:
+            pvpWf = pvpWorkflow(
+                self.adbDirTextEdit.text(),
+                self.connectionPortTextEdit.text(),
+                self.getPvpSettings()
+            )
+            self.MainFlow.append(pvpWf)
+        if len(taskCheckBoxArray) > 4 and taskCheckBoxArray[4]:
+            weeklyTowerWf = weeklyTower(
+                self.adbDirTextEdit.text(),
+                self.connectionPortTextEdit.text()
+            )
+            self.MainFlow.append(weeklyTowerWf)
         return self.MainFlow
 
     def applySettingAction(self):

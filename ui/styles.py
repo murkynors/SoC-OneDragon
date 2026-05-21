@@ -61,7 +61,7 @@ QWidget[role="taskRow"] {
     border: 1px solid #274045;
     border-radius: 8px;
 }
-QScrollArea, QTextEdit, QPlainTextEdit, QLineEdit, QComboBox {
+QScrollArea, QTextEdit, QPlainTextEdit, QLineEdit, QComboBox, QSpinBox {
     background: #0A1214;
     color: #F1F6F8;
     border: 1px solid #2A444A;
@@ -78,9 +78,24 @@ QComboBox {
     padding-right: 28px;
     min-height: 22px;
 }
+QSpinBox {
+    padding-right: 24px;
+    min-height: 22px;
+}
 QComboBox::drop-down {
     border: 0;
     width: 26px;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+    background: #162225;
+    border-left: 1px solid #2A444A;
+    width: 22px;
+}
+QSpinBox::up-button {
+    border-top-right-radius: 7px;
+}
+QSpinBox::down-button {
+    border-bottom-right-radius: 7px;
 }
 QComboBox QAbstractItemView {
     background: #0A1214;
