@@ -290,9 +290,10 @@
     - 3
     - 3
     - 3
-- controlMode: adb
+- controlMode: window
   windowTitle: 铃兰之剑
   processName: SoC.exe
+  windowClickBackend: pyautogui
   baseResolution:
   - 1280
   - 720
@@ -300,7 +301,7 @@
   - ch_sim
   - en
   taskSelection:
-    startApp: true
+    startApp: false
     farmResources: true
     receiveReward: true
     receiveRewardSubtasks:

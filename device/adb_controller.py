@@ -97,6 +97,7 @@ class AdbSingleton:
         self.window_title = ""
         self.process_name = "SoC.exe"
         self.base_resolution = (1280, 720)
+        self.window_click_backend = "pyautogui"
         self._window = None
         self._last_window_match_summary = ""
         self.stop_requested = False
@@ -116,6 +117,22 @@ class AdbSingleton:
         }.get(mode, mode)
         if mode in ("window", "adb"):
             return mode
+        return default
+
+    @staticmethod
+    def normalize_window_click_backend(click_backend, default="pyautogui"):
+        backend = str(click_backend or default).strip().lower().replace("-", "_")
+        backend = {
+            "py_auto_gui": "pyautogui",
+            "mouseevent": "mouse_event",
+            "mouse": "mouse_event",
+            "sendinput": "send_input",
+            "send": "send_input",
+            "post": "post_message",
+            "postmessage": "post_message",
+        }.get(backend, backend)
+        if backend in ("pyautogui", "mouse_event", "send_input", "post_message"):
+            return backend
         return default
 
     def connectDevice(self, adb_path='', adb_port='', retryCount=5):
@@ -179,6 +196,10 @@ class AdbSingleton:
             base_resolution = item.get("baseResolution")
             if isinstance(base_resolution, list) and len(base_resolution) == 2:
                 self.base_resolution = (int(base_resolution[0]), int(base_resolution[1]))
+            self.window_click_backend = self.normalize_window_click_backend(
+                item.get("windowClickBackend", self.window_click_backend),
+                self.window_click_backend,
+            )
 
     def _connect_window(self):
         window = self._find_window()
@@ -623,9 +644,21 @@ class AdbSingleton:
         return False
 
     def _window_mouse_down(self, screen_pos):
-        if self._send_input_mouse(screen_pos, 0x0002):
+        if self.window_click_backend == "send_input" and self._send_input_mouse(screen_pos, 0x0002):
             return
         self._move_mouse(screen_pos)
+        time.sleep(0.03)
+        if self.window_click_backend == "pyautogui":
+            try:
+                import pyautogui
+
+                pyautogui.mouseDown()
+                return
+            except ImportError as exc:
+                raise RuntimeError("缺少 pyautogui，请先运行 uv sync") from exc
+            except Exception as exc:
+                print("pyautogui mouse down failed:", exc)
+
         try:
             import win32api
             import win32con
@@ -642,9 +675,21 @@ class AdbSingleton:
         pyautogui.mouseDown()
 
     def _window_mouse_up(self, screen_pos):
-        if self._send_input_mouse(screen_pos, 0x0004):
+        if self.window_click_backend == "send_input" and self._send_input_mouse(screen_pos, 0x0004):
             return
         self._move_mouse(screen_pos)
+        time.sleep(0.03)
+        if self.window_click_backend == "pyautogui":
+            try:
+                import pyautogui
+
+                pyautogui.mouseUp()
+                return
+            except ImportError as exc:
+                raise RuntimeError("缺少 pyautogui，请先运行 uv sync") from exc
+            except Exception as exc:
+                print("pyautogui mouse up failed:", exc)
+
         try:
             import win32api
             import win32con
@@ -662,9 +707,13 @@ class AdbSingleton:
 
     def _window_click(self, screen_pos):
         self._activate_window()
-        self._post_window_click(screen_pos)
-        self._window_mouse_down(screen_pos)
+        self._move_mouse(screen_pos)
         time.sleep(0.08)
+        if self.window_click_backend == "post_message":
+            self._post_window_click(screen_pos)
+            return
+        self._window_mouse_down(screen_pos)
+        time.sleep(0.12)
         self._window_mouse_up(screen_pos)
 
     def adb_connect(self):
@@ -790,6 +839,7 @@ class AdbSingleton:
             LoggerSingleton.getInstance().info(
                 './logs/log_test.txt',
                 "窗口点击调试："
+                f"backend={self.window_click_backend}；"
                 f"client={bounds['left']},{bounds['top']} {bounds['width']}x{bounds['height']}；"
                 f"desktop={desktop['left']},{desktop['top']} {desktop['width']}x{desktop['height']}；"
                 f"target={self._window_info(target_hwnd)}"
