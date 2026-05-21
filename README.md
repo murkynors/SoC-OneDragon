@@ -2,7 +2,7 @@
 
 铃兰之剑自动化辅助
 
-给老咸鱼收菜的脚本，还没成为咸鱼的情况感觉也用不着脚本所以没写（
+给老咸鱼收菜的脚本，没满级/没开难度之类的情况没有测试
 
 ## 运行
 
@@ -12,14 +12,6 @@
 uv sync
 uv run python run.py
 ```
-
-也可以在上级目录运行：
-
-```bash
-uv run --project soc_one_dragon python soc_one_dragon/run.py
-```
-
-程序启动时会自动把工作目录切到本目录，因此 `app_config.yaml`、`active_config.yaml`、`Icons/`、`img/`、`logs/` 等相对路径都指向这里。
 
 ## 目录说明
 
