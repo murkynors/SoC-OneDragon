@@ -5,23 +5,52 @@ import yaml
 
 class OCRSingleton:
     instance = None
+    DEFAULT_LANGUAGES = ['ch_sim', 'en']
 
     def __init__(self):
-        self._OCR = easyocr.Reader(self._load_languages())
+        self._languages = self._load_languages()
+        self._OCR = easyocr.Reader(self._languages)
 
     def _load_languages(self):
+        return self.load_configured_languages()
+
+    @staticmethod
+    def load_configured_languages():
         try:
             with open('app_config.yaml', 'r', encoding='utf-8') as config_file:
                 config_data = yaml.safe_load(config_file) or []
         except FileNotFoundError:
-            return ['ch_sim', 'en']
+            return OCRSingleton.DEFAULT_LANGUAGES
 
         for item in config_data:
             if isinstance(item, dict) and 'ocrLanguages' in item:
                 languages = item['ocrLanguages']
                 if isinstance(languages, list) and languages:
                     return languages
-        return ['ch_sim', 'en']
+        return OCRSingleton.DEFAULT_LANGUAGES
+
+    @staticmethod
+    def localized_texts(*text_pairs):
+        languages = OCRSingleton.load_configured_languages()
+        use_simplified = 'ch_sim' in languages
+        use_traditional = 'ch_tra' in languages
+        selected_texts = []
+
+        for text_pair in text_pairs:
+            simplified_text = text_pair[0]
+            traditional_text = text_pair[1] if len(text_pair) > 1 else text_pair[0]
+            if use_traditional and not use_simplified:
+                candidates = [traditional_text]
+            elif use_simplified and not use_traditional:
+                candidates = [simplified_text]
+            else:
+                candidates = [simplified_text, traditional_text]
+
+            for candidate in candidates:
+                if candidate not in selected_texts:
+                    selected_texts.append(candidate)
+
+        return tuple(selected_texts)
 
     @staticmethod
     def getInstance():

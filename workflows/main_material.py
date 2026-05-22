@@ -531,7 +531,7 @@ class mainMaterial:
             if cvres is not None:
                 return True
 
-        for text in ("代行", "出击", "出擊"):
+        for text in OCRClass.OCRSingleton.localized_texts(("代行", "代行"), ("出击", "出擊")):
             ocr_res = OCRClass.OCRSingleton.getInstance().findTextPosition(screenshot_path, text)
             print(f"ocr result ({text} visible): ", ocr_res)
             if ocr_res:
@@ -545,7 +545,7 @@ class mainMaterial:
             if cvres is not None:
                 return cvres
 
-        for text in ("继续代行", "继续"):
+        for text in OCRClass.OCRSingleton.localized_texts(("继续代行", "繼續代行"), ("继续", "繼續")):
             ocr_res = OCRClass.OCRSingleton.getInstance().findTextPosition(screenshot_path, text)
             print(f"ocr result ({text}): ", ocr_res)
             if ocr_res:
@@ -559,7 +559,7 @@ class mainMaterial:
             if cvres is not None:
                 return cvres
 
-        for text in ("继续代行", "繼續代行", "代行奖励", "代行獎勵"):
+        for text in OCRClass.OCRSingleton.localized_texts(("继续代行", "繼續代行"), ("代行奖励", "代行獎勵")):
             ocr_res = OCRClass.OCRSingleton.getInstance().findTextPosition(screenshot_path, text)
             print(f"ocr result ({text}): ", ocr_res)
             if ocr_res:
@@ -584,7 +584,7 @@ class mainMaterial:
             if cvres is not None:
                 return cvres
 
-        for text in ("开始", "開始"):
+        for text in OCRClass.OCRSingleton.localized_texts(("开始", "開始")):
             ocr_res = OCRClass.OCRSingleton.getInstance().findTextPosition(screenshot_path, text)
             print(f"ocr result ({text}): ", ocr_res)
             if ocr_res:

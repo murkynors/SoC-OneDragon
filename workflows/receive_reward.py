@@ -188,10 +188,20 @@ class receiveReward:
         image.crop((left, top, right, bottom)).save(cropped_path)
         return cropped_path, (left, top)
 
-    def scan_text_positions(self, target_texts, screenshot_path='./img/rewardFlow.png', min_x=None, max_x=None, min_y=None, max_y=None):
+    def scan_text_positions(
+            self,
+            target_texts,
+            screenshot_path='./img/rewardFlow.png',
+            min_x=None,
+            max_x=None,
+            min_y=None,
+            max_y=None,
+            capture_first=True
+    ):
         if isinstance(target_texts, str):
             target_texts = [target_texts]
-        self.capture(screenshot_path)
+        if capture_first:
+            self.capture(screenshot_path)
         scan_path, offset = self.crop_ocr_region(screenshot_path, min_x, max_x, min_y, max_y)
         scan_res = OCRClass.OCRSingleton.getInstance().scanText(scan_path, enhanced=scan_path != screenshot_path)
         matched_positions = []
@@ -281,7 +291,12 @@ class receiveReward:
             self.log("未找到每日奖励入口")
             return False
         if not self.click_template('./Icons/RewardTake.png', './img/rewardTakeCheck.png', retries=4, sleep_seconds=2):
-            if not self.click_text(("领取", "領取"), './img/rewardTakeCheck.png', retries=3, sleep_seconds=2):
+            if not self.click_text(
+                    OCRClass.OCRSingleton.localized_texts(("领取", "領取")),
+                    './img/rewardTakeCheck.png',
+                    retries=3,
+                    sleep_seconds=2
+            ):
                 self.log("未找到每日奖励领取按钮")
                 return False
         self.click_pos((645, 555), 1)
@@ -303,7 +318,8 @@ class receiveReward:
                     self.click_pos(pos, 2)
                     return True
 
-            positions = self.scan_text_positions(("探索奖励", "探索獎勵"), './img/explorationRewardCheck.png')
+            entry_texts = OCRClass.OCRSingleton.localized_texts(("探索奖励", "探索獎勵"))
+            positions = self.scan_text_positions(entry_texts, './img/explorationRewardCheck.png', capture_first=False)
             if positions:
                 self.click_pos(positions[0][1], 2)
                 return True
@@ -318,7 +334,12 @@ class receiveReward:
         reward_taken = False
         for attempt in range(2):
             self.click_pos((190, 475), 2)
-            reward_taken = self.click_text(("领取", "領取"), './img/explorationTakeCheck.png', retries=4, sleep_seconds=1)
+            reward_taken = self.click_text(
+                OCRClass.OCRSingleton.localized_texts(("领取", "領取")),
+                './img/explorationTakeCheck.png',
+                retries=4,
+                sleep_seconds=1
+            )
             if reward_taken:
                 break
 
@@ -350,7 +371,12 @@ class receiveReward:
         if not self.click_template('./Icons/friend.png', './img/friendRewardCheck.png', retries=3, sleep_seconds=2):
             self.log("未找到好友入口")
             return False
-        self.click_text(("全部领取", "全部領取"), './img/friendTakeCheck.png', retries=4, sleep_seconds=1)
+        self.click_text(
+            OCRClass.OCRSingleton.localized_texts(("全部领取", "全部領取")),
+            './img/friendTakeCheck.png',
+            retries=4,
+            sleep_seconds=1
+        )
         gift_button_bounds = {
             "min_x": 900,
             "max_x": 1230,

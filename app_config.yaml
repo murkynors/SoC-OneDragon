@@ -301,16 +301,16 @@
   - ch_sim
   - en
   taskSelection:
-    startApp: false
-    farmResources: false
+    startApp: true
+    farmResources: true
     receiveReward: true
     receiveRewardSubtasks:
-      daily: false
+      daily: true
       exploration: true
-      friend: false
+      friend: true
       voyage: true
     pvp: true
     pvpSettings:
       difficulty: easy
-      battleCount: 3
+      battleCount: 1
     weeklyTower: false
