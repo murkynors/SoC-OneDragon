@@ -141,7 +141,6 @@ class AdbSingleton:
             print("connectWindow", self.window_title, self.process_name, self.base_resolution, retryCount)
         else:
             print("connectDevice", adb_path, adb_port, retryCount)
-        LoggerSingleton.getInstance().info('./logs/log_test.txt', "正在连接模拟器")
         if adb_path and adb_path != self.adb_path:
             self.adb_path = adb_path
         if adb_port and adb_port != self.adb_port:
@@ -150,18 +149,23 @@ class AdbSingleton:
             self.retry_count = retryCount
 
         if self.control_mode == "window":
+            LoggerSingleton.getInstance().info('./logs/log_test.txt', "正在连接模拟器窗口")
             return self._connect_window()
 
+        if self.deviceConnected:
+            LoggerSingleton.getInstance().info('./logs/log_test.txt', "模拟器已连接，继续使用当前连接")
+            return True
+
+        LoggerSingleton.getInstance().info('./logs/log_test.txt', "正在连接模拟器")
         for i in range(self.retry_count):
-            if not self.deviceConnected:
-                res = self.adb_connect()
-                print("runCmd adb_connect:", res[0])
-                if b'connected to' in res[0] or b'already connected' in res[0]:
-                    self.setDeviceConnected(True)
-                    print("Device Connected")
-                    break
-                else:
-                    self.setDeviceConnected(False)
+            res = self.adb_connect()
+            print("runCmd adb_connect:", res[0])
+            if b'connected to' in res[0] or b'already connected' in res[0]:
+                self.setDeviceConnected(True)
+                print("Device Connected")
+                break
+            else:
+                self.setDeviceConnected(False)
         return self.deviceConnected
 
     def _load_runtime_config(self):

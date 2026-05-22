@@ -5,3 +5,4 @@ __pycache__/
 /logs
 /dist
 /build
+/run.ps1

@@ -104,7 +104,13 @@ class weeklyTower:
 
     def is_main_screen(self):
         screenshot_path = self.capture("./img/weeklyTowerMainCheck.png")
-        for template_path in ("./Icons/MainPageCheck.png", "./Icons/loggedInCheckImg.png"):
+        for template_path in (
+            "./Icons/MainPageCheck.png",
+            "./Icons/loggedInCheckImg.png",
+            "./Icons/RewardIcon.png",
+            "./Icons/friend.png",
+            "./Icons/yuanhang.png",
+        ):
             if self.find_template(template_path, screenshot_path, threshold=0.72) is not None:
                 return True
         return False
@@ -249,17 +255,19 @@ class weeklyTower:
 
         self.log("开始每周爬塔")
         self.back_to_main_screen()
-        if not self.navigate_to_tower():
-            return False
+        try:
+            if not self.navigate_to_tower():
+                return False
 
-        for node_name, node_pos in self.TOWER_NODE_POSITIONS:
-            self.run_node(node_name, node_pos)
-            time.sleep(2)
+            for node_name, node_pos in self.TOWER_NODE_POSITIONS:
+                self.run_node(node_name, node_pos)
+                time.sleep(2)
 
-        self.collect_rewards()
-        self.back_to_main_screen()
-        self.log("结束每周爬塔")
-        return True
+            self.collect_rewards()
+            return True
+        finally:
+            self.back_to_main_screen()
+            self.log("结束每周爬塔")
 
 
 startFight = weeklyTower

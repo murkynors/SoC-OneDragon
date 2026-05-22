@@ -121,7 +121,13 @@ class pvpWorkflow:
 
     def is_main_screen(self):
         screenshot_path = self.capture("./img/pvpMainCheck.png")
-        for template_path in ("./Icons/MainPageCheck.png", "./Icons/loggedInCheckImg.png"):
+        for template_path in (
+            "./Icons/MainPageCheck.png",
+            "./Icons/loggedInCheckImg.png",
+            "./Icons/RewardIcon.png",
+            "./Icons/friend.png",
+            "./Icons/yuanhang.png",
+        ):
             pos = self.find_template(template_path, screenshot_path, threshold=0.72)
             if pos is not None:
                 return True
@@ -268,14 +274,16 @@ class pvpWorkflow:
 
         self.log("开始 PVP")
         self.back_to_main_screen()
-        if not self.open_pvp_screen():
-            return False
-
-        for battle_index in range(1, self.settings["battleCount"] + 1):
-            if not self.run_one_battle(battle_index):
+        try:
+            if not self.open_pvp_screen():
                 return False
-            time.sleep(2)
 
-        self.collect_mission_rewards()
-        self.log("结束 PVP")
-        return True
+            for battle_index in range(1, self.settings["battleCount"] + 1):
+                if not self.run_one_battle(battle_index):
+                    return False
+                time.sleep(2)
+
+            return self.collect_mission_rewards()
+        finally:
+            self.back_to_main_screen()
+            self.log("结束 PVP")

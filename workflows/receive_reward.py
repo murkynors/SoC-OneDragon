@@ -53,6 +53,8 @@ class receiveReward:
         ]
         if not any(self.reward_options.values()):
             self.log("未选择任何奖励子项，跳过收奖励")
+            self.back_to_main_screen()
+            log("结束收奖励")
             return True
 
         for option_key, reward_name, reward_func in reward_steps:
@@ -62,15 +64,17 @@ class receiveReward:
             try:
                 self.back_to_main_screen()
                 reward_func()
-                self.back_to_main_screen()
-                self.log(f"结束领取{reward_name}")
             except RuntimeError as exc:
                 if str(exc) == "流程已停止":
                     raise
                 self.log(f"{reward_name}流程异常：{exc}")
             except Exception as exc:
                 self.log(f"{reward_name}流程异常：{exc}")
+            finally:
+                self.back_to_main_screen()
+                self.log(f"结束领取{reward_name}")
 
+        self.back_to_main_screen()
         log("结束收奖励")
         return True
 
@@ -265,7 +269,7 @@ class receiveReward:
                 return True
             if self.click_game_back_button('./img/rewardBackCheck.png', retries=1, sleep_seconds=1):
                 continue
-            self.log("未识别到游戏内返回键，停止回主界面兜底，避免误点左上角头像")
+            self.log("未识别到游戏内返回键，停止回主界面兜底")
             break
         if self.is_main_screen():
             return True
@@ -311,8 +315,23 @@ class receiveReward:
             self.log("10秒内未找到探索奖励入口，跳过探索奖励")
             return False
 
-        self.click_pos((190, 475), 2)
-        reward_taken = self.click_text(("领取", "領取"), './img/explorationTakeCheck.png', retries=4, sleep_seconds=1)
+        reward_taken = False
+        for attempt in range(2):
+            self.click_pos((190, 475), 2)
+            reward_taken = self.click_text(("领取", "領取"), './img/explorationTakeCheck.png', retries=4, sleep_seconds=1)
+            if reward_taken:
+                break
+
+            if attempt == 0 and self.click_template(
+                './Icons/explorationReward2.png',
+                './img/explorationRewardStillOnEntryCheck.png',
+                retries=1,
+                sleep_seconds=2,
+            ):
+                self.log("未找到探索奖励领取按钮，检测到仍在探索奖励入口界面，重新点击入口")
+                continue
+            break
+
         if not reward_taken:
             self.log("未找到探索奖励领取按钮，继续尝试返回")
         else:

@@ -290,7 +290,7 @@
     - 3
     - 3
     - 3
-- controlMode: window
+- controlMode: adb
   windowTitle: 铃兰之剑
   processName: SoC.exe
   windowClickBackend: pyautogui
@@ -302,12 +302,12 @@
   - en
   taskSelection:
     startApp: false
-    farmResources: true
+    farmResources: false
     receiveReward: true
     receiveRewardSubtasks:
-      daily: true
+      daily: false
       exploration: true
-      friend: true
+      friend: false
       voyage: true
     pvp: true
     pvpSettings:

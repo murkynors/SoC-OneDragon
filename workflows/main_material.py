@@ -176,6 +176,35 @@ class mainMaterial:
         ADBClass.AdbSingleton.getInstance().tap(back_pos)
         return True
 
+    def isMainScreen(self, screenshot_path='./img/mainMaterialMainCheck.png'):
+        ADBClass.AdbSingleton.getInstance().screen_capture(screenshot_path)
+        for template_path in (
+            './Icons/MainPageCheck.png',
+            './Icons/loggedInCheckImg.png',
+            './Icons/RewardIcon.png',
+            './Icons/friend.png',
+            './Icons/yuanhang.png',
+        ):
+            if not os.path.exists(template_path):
+                continue
+            if self.cv2CheckImgExist(template_path, screenshot_path) is not None:
+                return True
+        return False
+
+    def backToMainScreen(self, max_steps=10):
+        for _ in range(max_steps):
+            if self.isMainScreen():
+                return True
+            if self.clickGameBackButton('./img/mainMaterialBackCheck.png'):
+                time.sleep(1)
+                continue
+            self.log("未识别到游戏内返回键，停止回主界面兜底")
+            break
+        if self.isMainScreen():
+            return True
+        self.log("未能确认已回到主界面")
+        return False
+
     def skipCurrentMission(self, mission_name, start_mission_result):
         reason = start_mission_result[1] if start_mission_result and len(start_mission_result) > 1 else "unknown"
         self.log(f"{mission_name} 可能已刷过，跳过当前任务：{reason}")
@@ -725,57 +754,60 @@ class mainMaterial:
             self.log("连接模拟器失败，停止刷图")
             return False
         self.log("开始刷图")
-        missionConfigEntries = self.getMissionConfigEntriesFromConfig()
-        for index, (mission, missionActiveName, missionConfig) in enumerate(missionConfigEntries):
-            self.log(self.format_mission_log(missionActiveName, missionConfig))
-            defaultDifficulty = missionConfig.get('defaultDifficulty', False)
-            highRewardFirst = missionConfig.get('highRewardFirst', False)
-            missionStatus = self.mapMissionToStatus(missionConfig, mission)
-            print("mission status: ", missionStatus)
-            det_res = self.checkCurrentPageStatus(missionStatus)
-            navigation_attempts = 0
-            while det_res[0] != "ARRIVED" and navigation_attempts < 20:
-                navigation_attempts += 1
+        try:
+            missionConfigEntries = self.getMissionConfigEntriesFromConfig()
+            for index, (mission, missionActiveName, missionConfig) in enumerate(missionConfigEntries):
+                self.log(self.format_mission_log(missionActiveName, missionConfig))
+                defaultDifficulty = missionConfig.get('defaultDifficulty', False)
+                highRewardFirst = missionConfig.get('highRewardFirst', False)
+                missionStatus = self.mapMissionToStatus(missionConfig, mission)
+                print("mission status: ", missionStatus)
                 det_res = self.checkCurrentPageStatus(missionStatus)
-                print("det_res", det_res)
-                GotoStepRes = self.GotoDailyMaterialStep(det_res, missionStatus)
-                print("GotoStepRes", GotoStepRes)
-                if GotoStepRes == "ARRIVED":
+                navigation_attempts = 0
+                while det_res[0] != "ARRIVED" and navigation_attempts < 20:
+                    navigation_attempts += 1
+                    det_res = self.checkCurrentPageStatus(missionStatus)
+                    print("det_res", det_res)
+                    GotoStepRes = self.GotoDailyMaterialStep(det_res, missionStatus)
+                    print("GotoStepRes", GotoStepRes)
+                    if GotoStepRes == "ARRIVED":
+                        time.sleep(2)
+                        break
+                    if GotoStepRes == "WAITING":
+                        time.sleep(3)
+                        continue
                     time.sleep(2)
-                    break
-                if GotoStepRes == "WAITING":
-                    time.sleep(3)
-                    continue
-                time.sleep(2)
-            if navigation_attempts >= 20:
-                self.log("跳转资源菜单超时，停止刷图")
-                return False
-            GotoMiddleRes = self.GotoMiddleStep(missionStatus, highRewardFirst)
-            if GotoMiddleRes is False:
-                return False
-            if defaultDifficulty:
-                self.log("使用默认难度，跳过难度选择")
-                GotoDifficultyRes = "ARRIVED"
-            else:
-                GotoDifficultyRes = self.GotoDifficultyStep(missionStatus)
-            if GotoDifficultyRes == "ARRIVED":
-                print("GotoDifficultyRes ARRIVED")
-                time.sleep(2)
-                if missionStatus[0] == "DailyMaterialAuto":
-                    startMissionRes = self.startMissionAuto(missionStatus, missionActiveName)
-                    if startMissionRes and startMissionRes[0] == "skip":
-                        self.skipCurrentMission(missionActiveName, startMissionRes)
-                        continue
-                    if not startMissionRes or startMissionRes[0] != "success":
-                        self.log(f"代行启动失败：{startMissionRes}")
-                        return False
-                elif missionStatus[0] == "DailyMaterialFight":
-                    startMissionRes = self.startMissionFight()
-                    if startMissionRes and startMissionRes[0] == "skip":
-                        self.skipCurrentMission(missionActiveName, startMissionRes)
-                        continue
-                    if not startMissionRes or startMissionRes[0] != "success":
-                        self.log(f"手动战斗启动失败：{startMissionRes}")
-                        return False
-                    self.log(f"结束刷图: {missionActiveName} (手动) | 已开始行动{index}次")
-        return True
+                if navigation_attempts >= 20:
+                    self.log("跳转资源菜单超时，停止刷图")
+                    return False
+                GotoMiddleRes = self.GotoMiddleStep(missionStatus, highRewardFirst)
+                if GotoMiddleRes is False:
+                    return False
+                if defaultDifficulty:
+                    self.log("使用默认难度，跳过难度选择")
+                    GotoDifficultyRes = "ARRIVED"
+                else:
+                    GotoDifficultyRes = self.GotoDifficultyStep(missionStatus)
+                if GotoDifficultyRes == "ARRIVED":
+                    print("GotoDifficultyRes ARRIVED")
+                    time.sleep(2)
+                    if missionStatus[0] == "DailyMaterialAuto":
+                        startMissionRes = self.startMissionAuto(missionStatus, missionActiveName)
+                        if startMissionRes and startMissionRes[0] == "skip":
+                            self.skipCurrentMission(missionActiveName, startMissionRes)
+                            continue
+                        if not startMissionRes or startMissionRes[0] != "success":
+                            self.log(f"代行启动失败：{startMissionRes}")
+                            return False
+                    elif missionStatus[0] == "DailyMaterialFight":
+                        startMissionRes = self.startMissionFight()
+                        if startMissionRes and startMissionRes[0] == "skip":
+                            self.skipCurrentMission(missionActiveName, startMissionRes)
+                            continue
+                        if not startMissionRes or startMissionRes[0] != "success":
+                            self.log(f"手动战斗启动失败：{startMissionRes}")
+                            return False
+                        self.log(f"结束刷图: {missionActiveName} (手动) | 已开始行动{index}次")
+            return True
+        finally:
+            self.backToMainScreen()
