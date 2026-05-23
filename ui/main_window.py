@@ -2,25 +2,25 @@ import glob
 import os
 import re
 
-from soc_one_dragon.services.logger import LoggerSingleton
-from soc_one_dragon.workflows.pvp import pvpWorkflow
-from soc_one_dragon.workflows.receive_reward import receiveReward
-from soc_one_dragon.workflows.start_app import runStartApp
-from soc_one_dragon.workflows.main_material import mainMaterial
-from soc_one_dragon.workflows.week_tower import weeklyTower
+from services.logger import LoggerSingleton
+from workflows.pvp import pvpWorkflow
+from workflows.receive_reward import receiveReward
+from workflows.start_app import runStartApp
+from workflows.main_material import mainMaterial
+from workflows.week_tower import weeklyTower
 
 import yaml
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtGui import Qt, QIcon
 
-from soc_one_dragon.device import adb_controller as ADBClass
+from device import adb_controller as ADBClass
 from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtWidgets import QPushButton, QCheckBox, QSizePolicy
-from soc_one_dragon.utils import image_tools as OctoUtil
-from soc_one_dragon.models.reward_tasks import REWARD_SUBTASK_DEFAULTS, REWARD_SUBTASK_LABELS
-from soc_one_dragon.models.scheduled_mission import scheduleMission
-from soc_one_dragon.ui.runtime import FlowThread, Monitor
-from soc_one_dragon.ui.styles import LIST_BUTTON_STYLE, SELECTED_BUTTON_STYLE
+from utils import image_tools as OctoUtil
+from models.reward_tasks import REWARD_SUBTASK_DEFAULTS, REWARD_SUBTASK_LABELS
+from models.scheduled_mission import scheduleMission
+from ui.runtime import FlowThread, Monitor
+from ui.styles import LIST_BUTTON_STYLE, SELECTED_BUTTON_STYLE
 
 
 class OctoUI(QtWidgets.QMainWindow):

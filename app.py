@@ -3,8 +3,8 @@ import sys
 
 from PySide6 import QtWidgets
 
-from soc_one_dragon.ui.main_window import OctoUI
-from soc_one_dragon.ui.styles import APP_STYLESHEET
+from ui.main_window import OctoUI
+from ui.styles import APP_STYLESHEET
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 

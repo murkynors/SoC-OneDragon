@@ -1,9 +1,9 @@
 import os
 import time
 
-from soc_one_dragon.device import adb_controller as ADBClass
-from soc_one_dragon.services.logger import LoggerSingleton
-from soc_one_dragon.utils import image_tools as OctoUtil
+from device import adb_controller as ADBClass
+from services.logger import LoggerSingleton
+from utils import image_tools as OctoUtil
 
 
 LOG_PATH = './logs/log_test.txt'

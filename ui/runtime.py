@@ -4,8 +4,8 @@ import traceback
 from PySide6 import QtCore
 from PySide6.QtCore import QRunnable, QThread
 
-from soc_one_dragon.device import adb_controller as ADBClass
-from soc_one_dragon.services.logger import LoggerSingleton
+from device import adb_controller as ADBClass
+from services.logger import LoggerSingleton
 
 
 class Signals(QtCore.QObject):

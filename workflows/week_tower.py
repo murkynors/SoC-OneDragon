@@ -1,8 +1,8 @@
 import os
 import time
 
-from soc_one_dragon.utils import image_tools as OctoUtil
-from soc_one_dragon.workflows.common import adb, log, run_manual_battle_flow
+from utils import image_tools as OctoUtil
+from workflows.common import adb, log, run_manual_battle_flow
 
 
 class weeklyTower:

@@ -3,7 +3,7 @@ import random
 
 import yaml
 
-from soc_one_dragon.utils import image_tools as OctoUtil
+from utils import image_tools as OctoUtil
 
 
 class scheduleMission:

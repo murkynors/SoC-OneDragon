@@ -1,5 +1,5 @@
-from soc_one_dragon.flow.base_node import BaseNode
-from soc_one_dragon.flow.decider_node import DeciderNode
+from flow.base_node import BaseNode
+from flow.decider_node import DeciderNode
 
 
 class BaseFlow:

@@ -1,4 +1,4 @@
-from soc_one_dragon.flow import base_node
+from flow import base_node
 
 
 class DeciderNode(base_node.BaseNode):

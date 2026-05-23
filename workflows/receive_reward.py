@@ -5,9 +5,9 @@ from difflib import SequenceMatcher
 
 from PIL import Image, ImageStat
 
-from soc_one_dragon.services import ocr_service as OCRClass
-from soc_one_dragon.utils import image_tools as OctoUtil
-from soc_one_dragon.workflows.common import SetupAdb, adb, log
+from services import ocr_service as OCRClass
+from utils import image_tools as OctoUtil
+from workflows.common import SetupAdb, adb, log
 
 
 class receiveReward:

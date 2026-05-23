@@ -1,8 +1,8 @@
 import time
 
-from soc_one_dragon.services import ocr_service as OCRClass
-from soc_one_dragon.utils.image_tools import OctoUtil
-from soc_one_dragon.workflows.common import SetupAdb, adb, log
+from services import ocr_service as OCRClass
+from utils.image_tools import OctoUtil
+from workflows.common import SetupAdb, adb, log
 
 
 def _text_exists_in_screenshot(screenshot_path, target_texts):

@@ -5,13 +5,13 @@ import time
 import yaml
 from PIL import Image
 
-from soc_one_dragon.device import adb_controller as ADBClass
-from soc_one_dragon.services import ocr_service as OCRClass
-from soc_one_dragon.utils import image_tools as OctoUtil
+from device import adb_controller as ADBClass
+from services import ocr_service as OCRClass
+from utils import image_tools as OctoUtil
 import numpy as np
 from PIL import ImageChops
 
-from soc_one_dragon.workflows.common import adb, log
+from workflows.common import adb, log
 
 
 class mainMaterial:

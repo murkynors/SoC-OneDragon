@@ -8,8 +8,8 @@ import numpy as np
 import yaml
 from PIL import Image
 
-from soc_one_dragon.device import adb_controller as ADBClass
-from soc_one_dragon.services import ocr_service as OCRClass
+from device import adb_controller as ADBClass
+from services import ocr_service as OCRClass
 
 
 class OctoUtil:
@@ -138,7 +138,7 @@ class OctoUtil:
     def log_blocking_screen(message):
         print(message)
         try:
-            from soc_one_dragon.services.logger import LoggerSingleton
+            from services.logger import LoggerSingleton
             LoggerSingleton.getInstance().info('./logs/log_test.txt', message)
         except Exception as exc:
             print("blocking screen log failed:", exc)

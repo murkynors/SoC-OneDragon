@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from soc_one_dragon.services.logger import LoggerSingleton
+from services.logger import LoggerSingleton
 
 
 def _set_process_dpi_awareness():

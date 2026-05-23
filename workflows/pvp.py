@@ -1,9 +1,9 @@
 import os
 import time
 
-from soc_one_dragon.device import adb_controller as ADBClass
-from soc_one_dragon.utils import image_tools as OctoUtil
-from soc_one_dragon.workflows.common import adb, log
+from device import adb_controller as ADBClass
+from utils import image_tools as OctoUtil
+from workflows.common import adb, log
 
 
 class pvpWorkflow:
