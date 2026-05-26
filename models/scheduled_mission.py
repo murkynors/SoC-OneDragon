@@ -1,9 +1,7 @@
-import os
 import random
 
-import yaml
-
 from utils import image_tools as OctoUtil
+from utils.app_config import get_mission_info, read_app_config
 
 
 class scheduleMission:
@@ -15,9 +13,7 @@ class scheduleMission:
         midMission = None
         if characterList == ['']:
             characterList = []
-        with open('app_config.yaml', 'r', encoding='utf-8') as keyconfigfile:
-            keyconfig_data = yaml.safe_load(keyconfigfile)
-            allMissionList = keyconfig_data[4]["missionInfo"]
+        allMissionList = get_mission_info()
         for mission in allMissionList:
              if mission["id"] in fullId:
                 missionId = mission["id"]
@@ -54,10 +50,8 @@ class scheduleMission:
         allDifficulty = []
         allMidMission = []
         missionArrIndex = None
-        if os.path.exists('app_config.yaml'):
-            with open('app_config.yaml', 'r', encoding='utf-8') as file:
-                config_data = yaml.safe_load(file)
-                allMissionList = config_data[4]["missionInfo"]
+        config_data = read_app_config()
+        allMissionList = get_mission_info(config_data)
         if missionParam is not None:
             if isinstance(missionParam, str):
                 missionName = missionParam

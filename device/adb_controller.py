@@ -2,9 +2,8 @@ import subprocess
 import time
 from pathlib import Path
 
-import yaml
-
 from services.logger import LoggerSingleton
+from utils.app_config import read_app_config
 
 
 def _set_process_dpi_awareness():
@@ -169,12 +168,7 @@ class AdbSingleton:
         return self.deviceConnected
 
     def _load_runtime_config(self):
-        config_path = Path("app_config.yaml")
-        if not config_path.exists():
-            return
-
-        with config_path.open("r", encoding="utf-8") as config_file:
-            config_data = yaml.safe_load(config_file) or []
+        config_data = read_app_config()
 
         for item in config_data:
             if not isinstance(item, dict):

@@ -1,6 +1,7 @@
 import easyocr
 import cv2
-import yaml
+
+from utils.app_config import read_app_config
 
 
 class OCRSingleton:
@@ -16,11 +17,7 @@ class OCRSingleton:
 
     @staticmethod
     def load_configured_languages():
-        try:
-            with open('app_config.yaml', 'r', encoding='utf-8') as config_file:
-                config_data = yaml.safe_load(config_file) or []
-        except FileNotFoundError:
-            return OCRSingleton.DEFAULT_LANGUAGES
+        config_data = read_app_config()
 
         for item in config_data:
             if isinstance(item, dict) and 'ocrLanguages' in item:

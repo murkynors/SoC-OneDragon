@@ -1,3 +1,11 @@
+from pathlib import Path
+
+import yaml
+
+
+APP_CONFIG_PATH = Path("app_config.yaml")
+
+DEFAULT_APP_CONFIG_YAML = r"""
 - adbDir: F:\Program Files\MuMuPlayer\nx_device\12.0\shell\adb.exe
 - connectionPort: 127.0.0.1:5555
 - missionList:
@@ -314,3 +322,49 @@
       difficulty: easy
       battleCount: 1
     weeklyTower: true
+"""
+
+
+def default_app_config():
+    return yaml.safe_load(DEFAULT_APP_CONFIG_YAML) or []
+
+
+def ensure_app_config(path=APP_CONFIG_PATH):
+    config_path = Path(path)
+    if config_path.exists():
+        return config_path
+
+    config_path.write_text(
+        yaml.safe_dump(default_app_config(), allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def read_app_config(path=APP_CONFIG_PATH):
+    config_path = ensure_app_config(path)
+    with config_path.open("r", encoding="utf-8") as config_file:
+        return yaml.safe_load(config_file) or []
+
+
+def write_app_config(config_data, path=APP_CONFIG_PATH):
+    config_path = ensure_app_config(path)
+    with config_path.open("w", encoding="utf-8") as config_file:
+        yaml.safe_dump(config_data, config_file, allow_unicode=True, sort_keys=False)
+
+
+def find_config_section(config_data, key):
+    for item in config_data:
+        if isinstance(item, dict) and key in item:
+            return item
+    return {}
+
+
+def get_mission_info(config_data=None):
+    config_data = read_app_config() if config_data is None else config_data
+    return find_config_section(config_data, "missionInfo").get("missionInfo", [])
+
+
+def get_character_list(config_data=None):
+    config_data = read_app_config() if config_data is None else config_data
+    return find_config_section(config_data, "characterList").get("characterList", [])

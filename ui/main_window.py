@@ -1,5 +1,4 @@
 import glob
-import os
 import re
 
 from services.logger import LoggerSingleton
@@ -17,6 +16,7 @@ from device import adb_controller as ADBClass
 from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtWidgets import QPushButton, QCheckBox, QSizePolicy
 from utils import image_tools as OctoUtil
+from utils.app_config import get_character_list, get_mission_info, read_app_config, write_app_config
 from models.reward_tasks import REWARD_SUBTASK_DEFAULTS, REWARD_SUBTASK_LABELS
 from models.scheduled_mission import scheduleMission
 from ui.runtime import FlowThread, Monitor
@@ -44,13 +44,11 @@ class OctoUI(QtWidgets.QMainWindow):
         self.missionInfoList = []
         self.characterNameList = []
         # UI 启动时先读取 app_config.yaml，后续下拉框和角色按钮都依赖这份配置。
-        if os.path.exists('app_config.yaml'):
-            with open('app_config.yaml', 'r', encoding='utf-8') as file:
-                config_data = yaml.safe_load(file)
-                self.missionInfoList = config_data[4]["missionInfo"]
-                for mission in config_data[4]["missionInfo"]:
-                    self.missionNameList.append(mission['name'])
-                self.characterNameList = config_data[3]['characterList']
+        config_data = read_app_config()
+        self.missionInfoList = get_mission_info(config_data)
+        for mission in self.missionInfoList:
+            self.missionNameList.append(mission['name'])
+        self.characterNameList = get_character_list(config_data)
 
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.setObjectName("contentStack")
@@ -509,32 +507,30 @@ class OctoUI(QtWidgets.QMainWindow):
 
         self.isLoadingRuntimeSettings = True
         try:
-            if os.path.exists('app_config.yaml'):
-                with open('app_config.yaml', 'r', encoding='utf-8') as file:
-                    config_data = yaml.safe_load(file)
-                    config_lookup = {}
-                    for item in config_data:
-                        if isinstance(item, dict):
-                            config_lookup.update(item)
-                    self.adbDirTextEdit.setText(config_lookup.get('adbDir', ''))
-                    self.connectionPortTextEdit.setText(config_lookup.get('connectionPort', ''))
-                    self.controlModeDropdown.setCurrentText(
-                        ADBClass.AdbSingleton.normalize_control_mode(config_lookup.get('controlMode', 'window'), 'window')
-                    )
-                    self.windowTitleTextEdit.setText(config_lookup.get('windowTitle', '铃兰'))
-                    self.processNameTextEdit.setText(config_lookup.get('processName', 'SoC.exe'))
-                    base_resolution = config_lookup.get('baseResolution', [1280, 720])
-                    self.baseResolutionTextEdit.setText(f"{base_resolution[0]}x{base_resolution[1]}")
-                    ocr_languages = config_lookup.get('ocrLanguages', ['ch_sim', 'en'])
-                    self.ocrLanguageDropdown.setCurrentText(",".join(ocr_languages))
-                    task_selection = config_lookup.get('taskSelection', {})
-                    self.receiveRewardSubtasks = self.resolveReceiveRewardSubtasks(task_selection)
-                    self.pvpSettings = self.resolvePvpSettings(task_selection)
-                    self.startAppCheckbox.setChecked(task_selection.get('startApp', False))
-                    self.farmResCheckbox.setChecked(task_selection.get('farmResources', False))
-                    self.receiveRewardCheckbox.setChecked(task_selection.get('receiveReward', False))
-                    self.pvpCheckbox.setChecked(task_selection.get('pvp', False))
-                    self.weeklyTowerCheckbox.setChecked(task_selection.get('weeklyTower', False))
+            config_data = read_app_config()
+            config_lookup = {}
+            for item in config_data:
+                if isinstance(item, dict):
+                    config_lookup.update(item)
+            self.adbDirTextEdit.setText(config_lookup.get('adbDir', ''))
+            self.connectionPortTextEdit.setText(config_lookup.get('connectionPort', ''))
+            self.controlModeDropdown.setCurrentText(
+                ADBClass.AdbSingleton.normalize_control_mode(config_lookup.get('controlMode', 'window'), 'window')
+            )
+            self.windowTitleTextEdit.setText(config_lookup.get('windowTitle', '铃兰'))
+            self.processNameTextEdit.setText(config_lookup.get('processName', 'SoC.exe'))
+            base_resolution = config_lookup.get('baseResolution', [1280, 720])
+            self.baseResolutionTextEdit.setText(f"{base_resolution[0]}x{base_resolution[1]}")
+            ocr_languages = config_lookup.get('ocrLanguages', ['ch_sim', 'en'])
+            self.ocrLanguageDropdown.setCurrentText(",".join(ocr_languages))
+            task_selection = config_lookup.get('taskSelection', {})
+            self.receiveRewardSubtasks = self.resolveReceiveRewardSubtasks(task_selection)
+            self.pvpSettings = self.resolvePvpSettings(task_selection)
+            self.startAppCheckbox.setChecked(task_selection.get('startApp', False))
+            self.farmResCheckbox.setChecked(task_selection.get('farmResources', False))
+            self.receiveRewardCheckbox.setChecked(task_selection.get('receiveReward', False))
+            self.pvpCheckbox.setChecked(task_selection.get('pvp', False))
+            self.weeklyTowerCheckbox.setChecked(task_selection.get('weeklyTower', False))
         finally:
             self.isLoadingRuntimeSettings = False
 
@@ -1014,11 +1010,7 @@ class OctoUI(QtWidgets.QMainWindow):
             return
         if getattr(self, "isLoadingRuntimeSettings", False):
             return
-        if os.path.exists('app_config.yaml'):
-            with open('app_config.yaml', 'r', encoding='utf-8') as file:
-                data = yaml.safe_load(file) or []
-        else:
-            data = []
+        data = read_app_config()
 
         runtime_config = None
         for item in data:
@@ -1031,15 +1023,10 @@ class OctoUI(QtWidgets.QMainWindow):
 
         runtime_config['taskSelection'] = self.buildTaskSelection()
 
-        with open('app_config.yaml', 'w', encoding='utf-8') as file:
-            yaml.safe_dump(data, file, allow_unicode=True, sort_keys=False)
+        write_app_config(data)
 
     def saveRuntimeSettings(self):
-        if os.path.exists('app_config.yaml'):
-            with open('app_config.yaml', 'r', encoding='utf-8') as file:
-                data = yaml.safe_load(file) or []
-        else:
-            data = []
+        data = read_app_config()
 
         if len(data) < 1 or not isinstance(data[0], dict):
             data.insert(0, {})
@@ -1074,8 +1061,7 @@ class OctoUI(QtWidgets.QMainWindow):
         runtime_config['ocrLanguages'] = self.ocrLanguageDropdown.currentText().split(',')
         runtime_config['taskSelection'] = self.buildTaskSelection()
 
-        with open('app_config.yaml', 'w', encoding='utf-8') as file:
-            yaml.safe_dump(data, file, allow_unicode=True, sort_keys=False)
+        write_app_config(data)
 
     def updateFreeAutoStatus(self):
         self.editingMission.freeAuto = self.missionSettingFreeAutoSwitchWidget.isChecked()
@@ -1195,16 +1181,12 @@ class OctoUI(QtWidgets.QMainWindow):
         return charBtn
 
     def save_character_list(self):
-        if not os.path.exists('app_config.yaml'):
-            return
-        with open('app_config.yaml', 'r', encoding='utf-8') as file:
-            config_data = yaml.safe_load(file) or []
+        config_data = read_app_config()
         for item in config_data:
             if isinstance(item, dict) and "characterList" in item:
                 item["characterList"] = self.characterNameList
                 break
-        with open('app_config.yaml', 'w', encoding='utf-8') as file:
-            yaml.safe_dump(config_data, file, allow_unicode=True, sort_keys=False)
+        write_app_config(config_data)
 
     def add_empty_character(self):
         character, ok = QtWidgets.QInputDialog.getText(self, "新增角色", "角色名称")

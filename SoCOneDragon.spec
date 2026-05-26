@@ -5,7 +5,7 @@ a = Analysis(
     ['run.py'],
     pathex=['..'],
     binaries=[],
-    datas=[('Icons', 'Icons'), ('configs', 'configs'), ('res', 'res'), ('ocr', 'ocr'), ('app_config.yaml', '.'), ('active_config.yaml', '.')],
+    datas=[('Icons', 'Icons'), ('configs', 'configs'), ('res', 'res'), ('ocr', 'ocr'), ('active_config.yaml', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
