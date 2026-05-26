@@ -1,8 +1,15 @@
 import time
 
+from PIL import Image
+
 from services import ocr_service as OCRClass
 from utils.image_tools import OctoUtil
 from workflows.common import SetupAdb, adb, log
+
+LOGIN_SCREENSHOT = "./img/loginCapture.png"
+LOGIN_BULLETIN_CLOSE_ICON = "./Icons/loginBulletinClose.png"
+LOGIN_START_GAME_ICON = "./Icons/loginStartGame.png"
+LOGGED_IN_CHECK_ICON = "./Icons/loggedInCheckImg.png"
 
 
 def _text_exists_in_screenshot(screenshot_path, target_texts):
@@ -20,6 +27,67 @@ def _text_exists_in_screenshot(screenshot_path, target_texts):
             if normalized_target in normalized_detected:
                 return True
     return False
+
+
+def _to_int_pos(pos):
+    return (int(pos[0]), int(pos[1]))
+
+
+def _is_expected_login_bulletin_close(match_result, screenshot_path, min_score=0.35):
+    if match_result is None or match_result["max_score"] < min_score:
+        return False
+
+    try:
+        with Image.open(screenshot_path) as image:
+            width, height = image.size
+    except Exception as exc:
+        print("read screenshot size failed:", exc)
+        width, height = 1280, 720
+
+    x, y = match_result["max_location"]
+    return (
+        width * 0.25 <= x <= width * 0.85
+        and height * 0.08 <= y <= height * 0.70
+    )
+
+
+def dismiss_login_bulletin(screenshot_path):
+    match_result = OctoUtil.cv2_match_template_details(
+        LOGIN_BULLETIN_CLOSE_ICON,
+        screenshot_path,
+        threshold=0.75
+    )
+    if match_result is None:
+        return False
+
+    if match_result["matched"]:
+        log("识别到登录公告关闭按钮，点击关闭")
+        adb().tap(_to_int_pos(match_result["tap_pos"]))
+        time.sleep(1)
+        return True
+
+    # 登录公告关闭按钮可能随版本轻微变化；仅在弹窗区域且 OCR 确认是公告时使用低分候选。
+    if not _is_expected_login_bulletin_close(match_result, screenshot_path):
+        return False
+    bulletin_texts = (
+        "公告", "更新", "通知", "维护",
+        "版本", "活动", "亲爱的", "玩家",
+        "內容", "内容", "修复", "補償", "补偿",
+    )
+    if not _text_exists_in_screenshot(screenshot_path, bulletin_texts):
+        return False
+
+    log("识别到登录公告界面，点击候选关闭按钮")
+    adb().tap(_to_int_pos(match_result["max_tap_pos"]))
+    time.sleep(1)
+    return True
+
+
+def find_login_template(icon_path, screenshot_path, threshold=0.75):
+    match_result = OctoUtil.cv2_match_template_details(icon_path, screenshot_path, threshold=threshold)
+    if match_result is None or not match_result["matched"]:
+        return None
+    return _to_int_pos(match_result["tap_pos"])
 
 
 def handle_start_app_blocking_screen(screenshot_path):
@@ -155,6 +223,43 @@ class RunStartApp:
         self.adb_port = adb_port
         self.currentStage = 0
 
+    def wait_until_logged_in(self, timeout_seconds=90, interval_seconds=1):
+        deadline = time.monotonic() + timeout_seconds
+        clicked_start = False
+
+        while time.monotonic() < deadline:
+            adb().screen_capture(LOGIN_SCREENSHOT)
+
+            logged_in_pos = find_login_template(LOGGED_IN_CHECK_ICON, LOGIN_SCREENSHOT, threshold=0.75)
+            print(f"cv2 result ({LOGGED_IN_CHECK_ICON}): ", logged_in_pos)
+            if logged_in_pos is not None:
+                self.currentStage = 2
+                return True
+
+            if dismiss_login_bulletin(LOGIN_SCREENSHOT):
+                continue
+
+            if handle_start_app_blocking_screen(LOGIN_SCREENSHOT):
+                continue
+
+            start_pos = find_login_template(LOGIN_START_GAME_ICON, LOGIN_SCREENSHOT, threshold=0.75)
+            print(f"cv2 result ({LOGIN_START_GAME_ICON}): ", start_pos)
+            if start_pos is not None:
+                log("识别到进入游戏按钮，点击进入")
+                adb().tap(start_pos)
+                clicked_start = True
+                self.currentStage = 1
+                time.sleep(3)
+                return True
+
+            time.sleep(interval_seconds)
+
+        if clicked_start:
+            log("进入游戏后等待主页超时，停止唤醒")
+        else:
+            log("登录界面识别超时，停止唤醒")
+        return False
+
     def run(self):
         log("开始唤醒")
 
@@ -171,48 +276,9 @@ class RunStartApp:
             return False
 
         time.sleep(5)
-        # 公告、开始游戏、已登录三种状态可能任选其一出现，用阶段号衔接后续步骤。
-        loginBulletinCloseFlow = ScreenshotTemplateLogin(screenshot="./img/loginCapture.png", icon="./Icons/loginBulletinClose.png", retry_count=5, subpattern=
-            [
-                  {
-                      "subPattern": "./Icons/loginStartGame.png",
-                      "targetStage": 1,
-                      "parameters": "cv_login_click_node_login"
-                  },
-                  {
-                      "subPattern": "./Icons/loggedInCheckImg.png",
-                      "targetStage": 2,
-                      "parameters": "FinalSleepNode"
-                  }
-            ]
-            , current_stage=self.currentStage
-        )
-        res = loginBulletinCloseFlow.run()
-        if res is None:
+        if not self.wait_until_logged_in():
             return False
-        if self.currentStage != loginBulletinCloseFlow.current_stage:
-            self.currentStage = loginBulletinCloseFlow.current_stage
-        else:
-            adb().tap(res[0])
-        if self.currentStage < 1:
-            loginButtonFlow = ScreenshotTemplateLogin(screenshot="./img/loginButtonCapture.png",
-                                                        icon="./Icons/loginStartGame.png", retry_count=5, subpattern=
-                 [
-                     {
-                         "subPattern": "./Icons/loggedInCheckImg.png",
-                         "targetStage": 2,
-                         "parameters": "FinalSleepNode"
-                     }
-                 ]
-                 , current_stage=self.currentStage
-            )
-            res = loginButtonFlow.run()
-            if res is None:
-                return False
-            if self.currentStage != loginButtonFlow.current_stage:
-                self.currentStage = loginButtonFlow.current_stage
-            else:
-                adb().tap(res[0])
+
         if self.currentStage < 2:
             time.sleep(10)
             loginRewardFlow = LoginReward()

@@ -176,6 +176,8 @@ class weeklyTower:
 
         # 刷图界面底部入口横排，从右往左滑出每周爬塔入口。
         adb().swipe((1176, 377), (101, 377), 1000)
+        time.sleep(0.5)
+        adb().swipe((1176, 377), (101, 377), 1000)
         time.sleep(1.5)
         if not self.click_template("./Icons/tower.png", "./img/weeklyTowerEntryCheck.png", retries=4, sleep_seconds=2, threshold=0.72):
             self.log("未找到每周爬塔入口")

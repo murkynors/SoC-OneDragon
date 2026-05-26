@@ -115,6 +115,7 @@ class OctoUtil:
         result = cv2.matchTemplate(screenshot, pattern, cv2.TM_CCOEFF_NORMED)
         _, max_score, _, max_location = cv2.minMaxLoc(result)
         print("template max score: ", max_score, "location: ", max_location, "icon: ", pattern_path)
+        w, h = pattern.shape[::-1]
 
         locations = np.where(result >= threshold)
         if len(locations[0]) == 0:
@@ -123,15 +124,20 @@ class OctoUtil:
                 "locations": locations,
                 "rect": (0, 0, 0, 0),
                 "tap_pos": (0, 0),
+                "max_score": max_score,
+                "max_location": max_location,
+                "max_tap_pos": (max_location[0] + w / 2, max_location[1] + h / 2),
             }
 
         x, y = locations[::-1]
-        w, h = pattern.shape[::-1]
         return {
             "matched": True,
             "locations": locations,
             "rect": (x[0], y[0], w, h),
             "tap_pos": (x[0] + w / 2, y[0] + h / 2),
+            "max_score": max_score,
+            "max_location": max_location,
+            "max_tap_pos": (max_location[0] + w / 2, max_location[1] + h / 2),
         }
 
     @staticmethod
