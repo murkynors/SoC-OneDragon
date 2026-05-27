@@ -50,6 +50,16 @@ class pvpWorkflow:
         adb().tap(pos)
         time.sleep(sleep_seconds)
 
+    def get_bottom_right_continue_pos(self, screenshot_path):
+        try:
+            from PIL import Image
+
+            with Image.open(screenshot_path) as screenshot:
+                width, height = screenshot.size
+            return (width * 0.952, height * 0.917)
+        except Exception:
+            return (1218, 660)
+
     def find_template(
             self,
             template_path,
@@ -222,6 +232,24 @@ class pvpWorkflow:
             time.sleep(0.5)
         return dismissed
 
+    def dismiss_battle_result(self, screenshot_path, retries=3):
+        continue_pos = self.get_bottom_right_continue_pos(screenshot_path)
+        for _ in range(retries):
+            self.log("点击 PVP 战斗结算继续")
+            self.click_pos(continue_pos, 2)
+            self.dismiss_rank_up()
+
+            screenshot_path = self.capture("./img/pvpAfterFightCheck.png")
+            end_pos = self.find_template("./Icons/pvp_fight_end.png", screenshot_path, threshold=0.72)
+            print("cv2 result (./Icons/pvp_fight_end.png after continue): ", end_pos)
+            if end_pos is None:
+                return True
+
+            if OctoUtil.OctoUtil.handleCommonBlockingScreen(screenshot_path):
+                continue
+        self.log("PVP 战斗结算页未能关闭")
+        return False
+
     def wait_battle_finished(self, timeout_seconds=240):
         deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
@@ -230,9 +258,7 @@ class pvpWorkflow:
             print("cv2 result (./Icons/pvp_fight_end.png): ", end_pos)
             if end_pos is not None:
                 self.log("PVP 战斗胜利")
-                self.click_pos(end_pos, 2)
-                self.dismiss_rank_up()
-                return True
+                return self.dismiss_battle_result(screenshot_path)
             if OctoUtil.OctoUtil.handleCommonBlockingScreen(screenshot_path):
                 continue
             time.sleep(5)
