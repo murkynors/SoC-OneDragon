@@ -16,6 +16,9 @@ class receiveReward:
         'exploration': False,
         'friend': False,
         'voyage': False,
+        'voyageOptions': {
+            'dispatchAll': False,
+        },
     }
 
     VOYAGE_REGIONS = [
@@ -51,7 +54,7 @@ class receiveReward:
             ('friend', '好友奖励', self.collect_friend_reward),
             ('voyage', '远航奖励', self.collect_voyage_reward),
         ]
-        if not any(self.reward_options.values()):
+        if not any(bool(self.reward_options.get(key, False)) for key in ('daily', 'exploration', 'friend', 'voyage')):
             self.log("未选择任何奖励子项，跳过收奖励")
             self.back_to_main_screen()
             log("结束收奖励")
@@ -80,10 +83,18 @@ class receiveReward:
 
     def resolve_reward_options(self, reward_options):
         resolved_options = dict(self.DEFAULT_REWARD_OPTIONS)
+        resolved_options['voyageOptions'] = dict(self.DEFAULT_REWARD_OPTIONS['voyageOptions'])
         if isinstance(reward_options, dict):
             for key in self.DEFAULT_REWARD_OPTIONS:
+                if key == 'voyageOptions':
+                    continue
                 if key in reward_options:
                     resolved_options[key] = bool(reward_options[key])
+            configured_voyage_options = reward_options.get('voyageOptions', {})
+            if isinstance(configured_voyage_options, dict):
+                for key in resolved_options['voyageOptions']:
+                    if key in configured_voyage_options:
+                        resolved_options['voyageOptions'][key] = bool(configured_voyage_options[key])
         return resolved_options
 
     def log(self, message):
@@ -432,14 +443,17 @@ class receiveReward:
             self.click_pos((910, 665), 1)
         self.dismiss_harvest_summary()
 
-        voyage_exhausted = False
-        self.voyage_remaining_dispatches = None
-        for region_name, template_paths, fallback_pos, search_bounds, threshold in self.VOYAGE_REGIONS:
-            if self.dispatch_voyage_region(region_name, template_paths, fallback_pos, search_bounds, threshold) == "exhausted":
-                voyage_exhausted = True
-                break
-        if voyage_exhausted:
-            self.log("远航今日剩余次数已用尽，进入兑换")
+        if self.reward_options.get('voyageOptions', {}).get('dispatchAll', False):
+            self.dispatch_all_voyage()
+        else:
+            voyage_exhausted = False
+            self.voyage_remaining_dispatches = None
+            for region_name, template_paths, fallback_pos, search_bounds, threshold in self.VOYAGE_REGIONS:
+                if self.dispatch_voyage_region(region_name, template_paths, fallback_pos, search_bounds, threshold) == "exhausted":
+                    voyage_exhausted = True
+                    break
+            if voyage_exhausted:
+                self.log("远航今日剩余次数已用尽，进入兑换")
 
         if self.open_voyage_exchange():
             self.exchange_bottom_items()
@@ -447,6 +461,60 @@ class receiveReward:
             self.log("未能进入远航兑换界面，跳过兑换")
         self.click_game_back_button('./img/voyageExchangeBackCheck.png', retries=1, sleep_seconds=1)
         self.click_game_back_button('./img/voyageBackCheck.png', retries=2, sleep_seconds=1)
+        return True
+
+    def dispatch_all_voyage(self):
+        if not self.ensure_voyage_main_screen_for_exchange():
+            self.log("未能确认远航主界面，跳过一键派遣")
+            return False
+
+        if not self.click_template(
+            './Icons/voyage_dispatch_all.png',
+            './img/voyageDispatchAllCheck.png',
+            retries=2,
+            sleep_seconds=1,
+            threshold=0.72,
+            min_x=1020,
+            max_x=1260,
+            min_y=610,
+            max_y=700
+        ) and not self.click_text(
+            ("一键派遣", "一鍵派遣"),
+            './img/voyageDispatchAllCheck.png',
+            retries=2,
+            sleep_seconds=1,
+            min_x=1020,
+            max_x=1260,
+            min_y=610,
+            max_y=700
+        ):
+            self.log("未识别到右下角一键派遣按钮，使用预设坐标")
+            self.click_pos((1160, 665), 1)
+
+        if self.click_template(
+            './Icons/ok.png',
+            './img/voyageDispatchAllOkCheck.png',
+            retries=3,
+            sleep_seconds=1,
+            threshold=0.72,
+            min_x=500,
+            max_x=780,
+            min_y=420,
+            max_y=640
+        ) or self.click_text(
+            ("确定", "確認", "确认", "OK"),
+            './img/voyageDispatchAllOkCheck.png',
+            retries=2,
+            sleep_seconds=1,
+            min_x=500,
+            max_x=780,
+            min_y=420,
+            max_y=640
+        ):
+            return True
+
+        self.log("未识别到一键派遣确认按钮，使用预设坐标")
+        self.click_pos((640, 540), 1)
         return True
 
     def voyage_region_ocr_target(self, region_name):

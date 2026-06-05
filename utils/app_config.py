@@ -317,6 +317,8 @@ DEFAULT_APP_CONFIG_YAML = r"""
       exploration: true
       friend: true
       voyage: true
+      voyageOptions:
+        dispatchAll: false
     pvp: false
     pvpSettings:
       difficulty: easy

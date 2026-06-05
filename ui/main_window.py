@@ -17,7 +17,12 @@ from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtWidgets import QPushButton, QCheckBox, QSizePolicy
 from utils import image_tools as OctoUtil
 from utils.app_config import get_character_list, get_mission_info, read_app_config, write_app_config
-from models.reward_tasks import REWARD_SUBTASK_DEFAULTS, REWARD_SUBTASK_LABELS
+from models.reward_tasks import (
+    REWARD_SUBTASK_DEFAULTS,
+    REWARD_SUBTASK_LABELS,
+    REWARD_VOYAGE_OPTION_DEFAULTS,
+    REWARD_VOYAGE_OPTION_LABELS,
+)
 from models.scheduled_mission import scheduleMission
 from ui.runtime import FlowThread, Monitor
 from ui.styles import LIST_BUTTON_STYLE, SELECTED_BUTTON_STYLE
@@ -866,7 +871,9 @@ class OctoUI(QtWidgets.QMainWindow):
         self.setRunStatus("已停止")
 
     def defaultReceiveRewardSubtasks(self):
-        return dict(REWARD_SUBTASK_DEFAULTS)
+        reward_subtasks = dict(REWARD_SUBTASK_DEFAULTS)
+        reward_subtasks['voyageOptions'] = dict(REWARD_VOYAGE_OPTION_DEFAULTS)
+        return reward_subtasks
 
     def resolveReceiveRewardSubtasks(self, task_selection):
         reward_subtasks = self.defaultReceiveRewardSubtasks()
@@ -878,6 +885,11 @@ class OctoUI(QtWidgets.QMainWindow):
             for key in REWARD_SUBTASK_DEFAULTS:
                 if key in configured_subtasks:
                     reward_subtasks[key] = bool(configured_subtasks[key])
+            configured_voyage_options = configured_subtasks.get('voyageOptions', {})
+            if isinstance(configured_voyage_options, dict):
+                for key in REWARD_VOYAGE_OPTION_DEFAULTS:
+                    if key in configured_voyage_options:
+                        reward_subtasks['voyageOptions'][key] = bool(configured_voyage_options[key])
 
         flat_key_map = {
             'rewardDaily': 'daily',
@@ -888,6 +900,8 @@ class OctoUI(QtWidgets.QMainWindow):
         for flat_key, subtask_key in flat_key_map.items():
             if flat_key in task_selection:
                 reward_subtasks[subtask_key] = bool(task_selection[flat_key])
+        if 'rewardVoyageDispatchAll' in task_selection:
+            reward_subtasks['voyageOptions']['dispatchAll'] = bool(task_selection['rewardVoyageDispatchAll'])
 
         return reward_subtasks
 
@@ -949,6 +963,29 @@ class OctoUI(QtWidgets.QMainWindow):
             checkbox.setChecked(current_subtasks.get(key, REWARD_SUBTASK_DEFAULTS[key]))
             checkbox_map[key] = checkbox
             layout.addWidget(checkbox)
+            if key == 'voyage':
+                voyage_option_layout = QtWidgets.QVBoxLayout()
+                voyage_option_layout.setContentsMargins(24, 0, 0, 0)
+                voyage_option_map = {}
+                for option_key, option_label in REWARD_VOYAGE_OPTION_LABELS.items():
+                    option_checkbox = QCheckBox(option_label, dialog)
+                    option_checkbox.setChecked(
+                        current_subtasks.get('voyageOptions', {}).get(
+                            option_key,
+                            REWARD_VOYAGE_OPTION_DEFAULTS[option_key]
+                        )
+                    )
+                    option_checkbox.setEnabled(checkbox.isChecked())
+                    voyage_option_map[option_key] = option_checkbox
+                    voyage_option_layout.addWidget(option_checkbox)
+                checkbox.toggled.connect(
+                    lambda checked, option_map=voyage_option_map: [
+                        option_checkbox.setEnabled(checked)
+                        for option_checkbox in option_map.values()
+                    ]
+                )
+                checkbox_map['voyageOptions'] = voyage_option_map
+                layout.addLayout(voyage_option_layout)
 
         button_box = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel,
@@ -962,6 +999,11 @@ class OctoUI(QtWidgets.QMainWindow):
             self.receiveRewardSubtasks = {
                 key: checkbox.isChecked()
                 for key, checkbox in checkbox_map.items()
+                if key in REWARD_SUBTASK_DEFAULTS
+            }
+            self.receiveRewardSubtasks['voyageOptions'] = {
+                key: checkbox.isChecked()
+                for key, checkbox in checkbox_map.get('voyageOptions', {}).items()
             }
             self.saveTaskSelection()
 
