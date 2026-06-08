@@ -29,6 +29,18 @@ class receiveReward:
         ("铃兰小镇-天平之上", ['./Icons/voyage_region_bell_balance.png'], (675, 465), (450, 300, 780, 560), 0.65),
     ]
     VOYAGE_DISPATCHES_PER_REGION = 2
+    VOYAGE_HARVEST_BUTTON_BOUNDS = {
+        "min_x": 1020,
+        "max_x": 1260,
+        "min_y": 610,
+        "max_y": 700,
+    }
+    VOYAGE_DISPATCH_ALL_BUTTON_BOUNDS = {
+        "min_x": 1020,
+        "max_x": 1260,
+        "min_y": 610,
+        "max_y": 700,
+    }
 
     def __init__(self, adb_path, adb_port, reward_options=None):
         self.adb_path = adb_path
@@ -413,35 +425,42 @@ class receiveReward:
         self.click_game_back_button('./img/friendBackCheck.png', retries=3, sleep_seconds=1)
         return True
 
+    def click_voyage_all_harvest(self):
+        if self.click_template(
+            './Icons/voyage_harvest_all.png',
+            './img/voyageHarvestCheck.png',
+            retries=2,
+            sleep_seconds=1,
+            threshold=0.72,
+            **self.VOYAGE_HARVEST_BUTTON_BOUNDS
+        ) or self.click_text(
+            ("全部收获", "全部收穫", "全部收货"),
+            './img/voyageHarvestCheck.png',
+            retries=2,
+            sleep_seconds=1,
+            **self.VOYAGE_HARVEST_BUTTON_BOUNDS
+        ):
+            return True
+
+        dispatch_positions = self.scan_text_positions(
+            ("一键派遣", "一鍵派遣"),
+            './img/voyageHarvestCheck.png',
+            **self.VOYAGE_DISPATCH_ALL_BUTTON_BOUNDS
+        )
+        if dispatch_positions:
+            self.log("右下角已是远航一键派遣，跳过全部收获")
+        else:
+            self.log("未识别到右下角全部收获按钮，跳过收获")
+        return False
+
     def collect_voyage_reward(self):
         if not self.click_template('./Icons/yuanhang.png', './img/voyageEntryCheck.png', retries=3, sleep_seconds=2):
             if not self.click_text(("远航", "遠航"), './img/voyageEntryCheck.png', retries=3, sleep_seconds=2):
                 self.log("未找到远航入口")
                 return False
 
-        if not self.click_template(
-            './Icons/voyage_harvest_all.png',
-            './img/voyageHarvestCheck.png',
-            retries=2,
-            sleep_seconds=1,
-            threshold=0.72,
-            min_x=760,
-            max_x=1040,
-            min_y=610,
-            max_y=700
-        ) and not self.click_text(
-            ("全部收获", "全部收穫", "全部收货"),
-            './img/voyageHarvestCheck.png',
-            retries=2,
-            sleep_seconds=1,
-            min_x=760,
-            max_x=1040,
-            min_y=610,
-            max_y=700
-        ):
-            self.log("未识别到右下角全部收获按钮，使用预设坐标")
-            self.click_pos((910, 665), 1)
-        self.dismiss_harvest_summary()
+        if self.click_voyage_all_harvest():
+            self.dismiss_harvest_summary()
 
         if self.reward_options.get('voyageOptions', {}).get('dispatchAll', False):
             self.dispatch_all_voyage()
@@ -463,34 +482,39 @@ class receiveReward:
         self.click_game_back_button('./img/voyageBackCheck.png', retries=2, sleep_seconds=1)
         return True
 
-    def dispatch_all_voyage(self):
-        if not self.ensure_voyage_main_screen_for_exchange():
-            self.log("未能确认远航主界面，跳过一键派遣")
-            return False
-
-        if not self.click_template(
+    def click_voyage_dispatch_all_button(self):
+        return self.click_template(
             './Icons/voyage_dispatch_all.png',
             './img/voyageDispatchAllCheck.png',
             retries=2,
             sleep_seconds=1,
             threshold=0.72,
-            min_x=1020,
-            max_x=1260,
-            min_y=610,
-            max_y=700
-        ) and not self.click_text(
+            **self.VOYAGE_DISPATCH_ALL_BUTTON_BOUNDS
+        ) or self.click_text(
             ("一键派遣", "一鍵派遣"),
             './img/voyageDispatchAllCheck.png',
             retries=2,
             sleep_seconds=1,
-            min_x=1020,
-            max_x=1260,
-            min_y=610,
-            max_y=700
-        ):
-            self.log("未识别到右下角一键派遣按钮，使用预设坐标")
-            self.click_pos((1160, 665), 1)
+            **self.VOYAGE_DISPATCH_ALL_BUTTON_BOUNDS
+        )
 
+    def dispatch_all_voyage(self):
+        if not self.ensure_voyage_main_screen_for_exchange():
+            self.log("未能确认远航主界面，跳过一键派遣")
+            return False
+
+        if not self.click_voyage_dispatch_all_button():
+            if self.click_voyage_all_harvest():
+                self.log("右下角仍是全部收获，先收获后重试一键派遣")
+                self.dismiss_harvest_summary(initial_sleep=0.8)
+                if self.ensure_voyage_main_screen_for_exchange() and self.click_voyage_dispatch_all_button():
+                    return self.confirm_voyage_dispatch_all()
+            self.log("未识别到右下角一键派遣按钮，跳过一键派遣")
+            return False
+
+        return self.confirm_voyage_dispatch_all()
+
+    def confirm_voyage_dispatch_all(self):
         if self.click_template(
             './Icons/ok.png',
             './img/voyageDispatchAllOkCheck.png',
@@ -511,6 +535,14 @@ class receiveReward:
             min_y=420,
             max_y=640
         ):
+            return True
+
+        if self.is_harvest_summary_screen('./img/voyageDispatchAllOkCheck.png'):
+            self.log("一键派遣后出现收获一览，关闭弹窗后停止确认兜底")
+            self.dismiss_harvest_summary(initial_sleep=0, wait_seconds=2)
+            return False
+        if self.is_voyage_main_screen('./img/voyageDispatchAllOkCheck.png'):
+            self.log("一键派遣后未出现确认弹窗，跳过确认兜底")
             return True
 
         self.log("未识别到一键派遣确认按钮，使用预设坐标")
@@ -608,10 +640,7 @@ class receiveReward:
             './Icons/voyage_harvest_all.png',
             screenshot_path,
             threshold=0.72,
-            min_x=760,
-            max_x=1040,
-            min_y=610,
-            max_y=700
+            **self.VOYAGE_HARVEST_BUTTON_BOUNDS
         ) is not None:
             return True
         try:
